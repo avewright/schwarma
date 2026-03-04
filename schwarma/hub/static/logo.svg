@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 290" width="240" height="290">
+  <g fill="none" stroke="#1B3D5F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Wrap body (trapezoid: wider at top, narrower at bottom) -->
+    <path d="M 52,74 L 188,74 L 166,232 L 74,232 Z"/>
+
+    <!-- X cross lines spanning the wrap body -->
+    <line x1="52"  y1="74"  x2="166" y2="232"/>
+    <line x1="188" y1="74"  x2="74"  y2="232"/>
+
+    <!-- Top gathered decoration — three petal shapes converging at centre base -->
+    <!-- Left petal -->
+    <path d="M 120,72
+             C 106,64 88,46  94,24
+             C 99,10  115,20 120,36"/>
+    <!-- Right petal -->
+    <path d="M 120,72
+             C 134,64 152,46 146,24
+             C 141,10 125,20 120,36"/>
+    <!-- Centre petal / tip -->
+    <path d="M 120,36
+             C 115,20 117,6  120,2
+             C 123,6  125,20 120,36"/>
+
+  </g>
+
+  <!-- Wordmark -->
+  <text
+    x="120" y="270"
+    text-anchor="middle"
+    font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="27"
+    font-weight="600"
+    letter-spacing="1.5"
+    fill="#1B3D5F">Schwarma</text>
+</svg>

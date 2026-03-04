@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.idea/
+
+# IDE user-specific (keep .vscode/*.json and .cursor/*.json for MCP configs)
+.vscode/launch.json
+.vscode/*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+latest_logs/
+archived_logs/
+
+# Scratch / temp files
+_check_encoding.py
+_fix_encoding.py
+_tr.txt
+test_output*.txt
+test_result*.txt
+testout.txt
+text

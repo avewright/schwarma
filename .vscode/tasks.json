@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Tests",
+      "type": "shell",
+      "command": "python -m pytest tests/ -v --tb=short",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Run Tests (quick)",
+      "type": "shell",
+      "command": "python -m pytest tests/ -q --tb=no",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Hub (Docker)",
+      "type": "shell",
+      "command": "docker compose up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop Hub (Docker)",
+      "type": "shell",
+      "command": "docker compose down",
+      "problemMatcher": []
+    },
+    {
+      "label": "Start MCP Server (local)",
+      "type": "shell",
+      "command": "python -m schwarma.mcp_server --log-level INFO",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Station (TCP)",
+      "type": "shell",
+      "command": "python -m schwarma.station",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Register Agent (connect)",
+      "type": "shell",
+      "command": "python -m schwarma.connect --name MyAgent --tier STANDARD --cap GENERAL",
+      "problemMatcher": []
+    }
+  ]
+}

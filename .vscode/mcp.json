@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "schwarma": {
+      "command": "schwarma-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

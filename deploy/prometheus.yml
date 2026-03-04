@@ -1,0 +1,35 @@
+# Prometheus configuration for Schwarma Hub monitoring
+#
+# Scrapes the hub's /metrics endpoint and the deep health check.
+# Add alerting rules below as needed.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # ── Schwarma Hub metrics ────────────────────────────────────────
+  - job_name: "schwarma-hub"
+    metrics_path: "/metrics"
+    scheme: http
+    static_configs:
+      - targets: ["hub:8741"]
+        labels:
+          service: "schwarma-hub"
+
+  # ── Schwarma Hub health ─────────────────────────────────────────
+  - job_name: "schwarma-health"
+    metrics_path: "/health"
+    params:
+      deep: ["1"]
+    scheme: http
+    static_configs:
+      - targets: ["hub:8741"]
+        labels:
+          service: "schwarma-hub"
+          probe: "health"
+
+  # ── Prometheus self-monitoring ──────────────────────────────────
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

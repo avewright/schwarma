@@ -1,0 +1,136 @@
+# Schwarma Hub — Production Deployment
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in production values
+#   2. Replace schwarma.example.com in deploy/Caddyfile with your domain
+#   3. docker compose -f docker-compose.production.yml up -d
+#
+# Includes:
+#   - Hub (TCP Station + HTTP API)
+#   - PostgreSQL 16 with strong credentials
+#   - Caddy reverse proxy with automatic Let's Encrypt TLS
+#   - Prometheus for metrics collection
+#
+# Ports exposed:
+#   80/443 — Caddy (HTTP/HTTPS for browser + API access)
+#   9741   — TCP Station (direct agent/bot connections)
+#   9090   — Prometheus (internal metrics dashboard)
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: schwarma
+      POSTGRES_USER: schwarma
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-changeme-use-a-strong-password}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schwarma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+    restart: unless-stopped
+    # Not exposed externally — only accessible from hub via internal network
+
+  # ── Schwarma Hub ────────────────────────────────────────────────────
+  hub:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SCHWARMA_DATABASE_URL: "postgresql://schwarma:${POSTGRES_PASSWORD:-changeme-use-a-strong-password}@postgres:5432/schwarma"
+      SCHWARMA_HOST: "0.0.0.0"
+      SCHWARMA_TCP_PORT: "9741"
+      SCHWARMA_HTTP_PORT: "8741"
+      SCHWARMA_LOG_LEVEL: "INFO"
+      SCHWARMA_LOG_FORMAT: "json"
+      # Session secret — MUST be set for production persistence
+      SCHWARMA_SESSION_SECRET: "${SCHWARMA_SESSION_SECRET}"
+      # CORS — set to your production domain
+      SCHWARMA_ALLOWED_ORIGINS: "${SCHWARMA_ALLOWED_ORIGINS:-https://schwarma.example.com}"
+      # OAuth
+      SCHWARMA_GOOGLE_CLIENT_ID: "${SCHWARMA_GOOGLE_CLIENT_ID:-}"
+      SCHWARMA_GOOGLE_CLIENT_SECRET: "${SCHWARMA_GOOGLE_CLIENT_SECRET:-}"
+      SCHWARMA_GOOGLE_REDIRECT_URI: "${SCHWARMA_GOOGLE_REDIRECT_URI:-https://schwarma.example.com/auth/google/callback}"
+      SCHWARMA_GITHUB_CLIENT_ID: "${SCHWARMA_GITHUB_CLIENT_ID:-}"
+      SCHWARMA_GITHUB_CLIENT_SECRET: "${SCHWARMA_GITHUB_CLIENT_SECRET:-}"
+      SCHWARMA_GITHUB_REDIRECT_URI: "${SCHWARMA_GITHUB_REDIRECT_URI:-https://schwarma.example.com/auth/github/callback}"
+      # SMTP
+      SCHWARMA_SMTP_HOST: "${SCHWARMA_SMTP_HOST:-}"
+      SCHWARMA_SMTP_PORT: "${SCHWARMA_SMTP_PORT:-587}"
+      SCHWARMA_SMTP_USER: "${SCHWARMA_SMTP_USER:-}"
+      SCHWARMA_SMTP_PASSWORD: "${SCHWARMA_SMTP_PASSWORD:-}"
+      SCHWARMA_SMTP_FROM: "${SCHWARMA_SMTP_FROM:-}"
+      # Rate limits (production tighter defaults)
+      SCHWARMA_HTTP_RATE_LIMIT: "60"
+      SCHWARMA_HTTP_RATE_WINDOW: "60"
+      SCHWARMA_SHUTDOWN_DRAIN: "10"
+    ports:
+      - "9741:9741"  # TCP Station — direct agent connections
+      # HTTP not exposed directly — Caddy proxies to it
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2.0"
+        reservations:
+          memory: 256M
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8741/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # ── Caddy reverse proxy (automatic TLS) ─────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      hub:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+    restart: unless-stopped
+
+  # ── Prometheus (metrics collection) ─────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+  prometheus_data:

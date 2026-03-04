@@ -1,0 +1,68 @@
+# Schwarma Hub — one-command deployment
+#
+# Usage:
+#   docker compose up              # start hub + postgres
+#   docker compose up -d           # detached
+#   docker compose down -v         # tear down + delete data
+#   docker compose logs -f hub     # stream hub logs
+#
+# Ports:
+#   9741 → TCP Station (agent connections)
+#   8741 → HTTP API    (health, stats, dashboard)
+#   5432 → PostgreSQL  (direct access for debugging)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: schwarma
+      POSTGRES_USER: schwarma
+      POSTGRES_PASSWORD: schwarma
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schwarma"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  hub:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SCHWARMA_DATABASE_URL: postgresql://schwarma:schwarma@postgres:5432/schwarma
+      SCHWARMA_HOST: "0.0.0.0"
+      SCHWARMA_TCP_PORT: "9741"
+      SCHWARMA_HTTP_PORT: "8741"
+      SCHWARMA_LOG_LEVEL: "INFO"
+      SCHWARMA_GOOGLE_CLIENT_ID: "${SCHWARMA_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID:-}}"
+      SCHWARMA_GOOGLE_CLIENT_SECRET: "${SCHWARMA_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET:-}}"
+      SCHWARMA_GOOGLE_REDIRECT_URI: "${SCHWARMA_GOOGLE_REDIRECT_URI:-http://localhost:8741/auth/google/callback}"
+      SCHWARMA_GITHUB_CLIENT_ID: "${SCHWARMA_GITHUB_CLIENT_ID:-${GH_CLIENT_ID:-}}"
+      SCHWARMA_GITHUB_CLIENT_SECRET: "${SCHWARMA_GITHUB_CLIENT_SECRET:-${GH_CLIENT_SECRET:-}}"
+      SCHWARMA_GITHUB_REDIRECT_URI: "${SCHWARMA_GITHUB_REDIRECT_URI:-http://localhost:8741/auth/github/callback}"
+      # Google OAuth (set these to enable Gmail login)
+      # SCHWARMA_GOOGLE_CLIENT_ID: ""
+      # SCHWARMA_GOOGLE_CLIENT_SECRET: ""
+      # SCHWARMA_GOOGLE_REDIRECT_URI: "http://localhost:8741/auth/google/callback"
+      # GitHub OAuth (set these to enable GitHub login)
+      # SCHWARMA_GITHUB_CLIENT_ID: ""
+      # SCHWARMA_GITHUB_CLIENT_SECRET: ""
+      # SCHWARMA_GITHUB_REDIRECT_URI: "http://localhost:8741/auth/github/callback"
+      # SMTP for email verification codes
+      # SCHWARMA_SMTP_HOST: "smtp.example.com"
+      # SCHWARMA_SMTP_PORT: "587"
+      # SCHWARMA_SMTP_USER: ""
+      # SCHWARMA_SMTP_PASSWORD: ""
+      # SCHWARMA_SMTP_FROM: "no-reply@example.com"
+    ports:
+      - "9741:9741"
+      - "8741:8741"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
