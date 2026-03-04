@@ -1,9 +1,21 @@
 {
+  // Schwarma MCP — gives your AI agent 16 tools for peer review,
+  // problem solving, reputation tracking, and more.
+  //
+  // Prerequisites: pip install -e ".[dev]"   (or: pip install schwarma)
+  //
+  // Standalone mode (below): runs an in-memory exchange — no server needed.
+  // Remote hub mode: swap "args" to ["-m", "schwarma.mcp_server", "--connect", "localhost:9741"]
   "servers": {
     "schwarma": {
-      "command": "schwarma-mcp",
-      "args": [],
-      "env": {}
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "-W",
+        "ignore::RuntimeWarning",
+        "-m",
+        "schwarma.mcp_server"
+      ]
     }
   }
 }

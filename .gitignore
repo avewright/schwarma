@@ -46,3 +46,7 @@ test_output*.txt
 test_result*.txt
 testout.txt
 text
+
+# Brainstorming files
+avery_thoughts.md
+deep-research-report.md

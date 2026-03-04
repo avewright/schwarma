@@ -52,7 +52,15 @@ from schwarma.station import SchwarmaStation
 from schwarma.client import SchwarmaClient, StationError
 from schwarma.bot import BotConfig, SchwarmaBot
 from schwarma.http_client import HttpClient, HttpClientError
-from schwarma.mcp_server import SchwarmaMCPServer
+
+
+def __getattr__(name: str):
+    """Lazy import for SchwarmaMCPServer to avoid RuntimeWarning when
+    running ``python -m schwarma.mcp_server``."""
+    if name == "SchwarmaMCPServer":
+        from schwarma.mcp_server import SchwarmaMCPServer
+        return SchwarmaMCPServer
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __version__ = "0.1.0"
 

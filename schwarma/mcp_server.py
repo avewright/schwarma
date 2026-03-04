@@ -12,21 +12,33 @@ MCP hosts recognize it as a compliant tool server.
 
 Usage (command line)::
 
-    schwarma-mcp                    # uses entry point from pyproject.toml
-    python -m schwarma.mcp_server   # alternative
+    python -m schwarma.mcp_server               # recommended — portable
+    schwarma-mcp                                # entry point (if on PATH)
 
-MCP host configuration (e.g. Claude Desktop ``claude_desktop_config.json``)::
+VS Code ``.vscode/mcp.json``::
 
     {
-      "mcpServers": {
+      "servers": {
         "schwarma": {
-          "command": "schwarma-mcp",
-          "args": []
+          "type": "stdio",
+          "command": "python",
+          "args": ["-m", "schwarma.mcp_server"]
         }
       }
     }
 
-Or with a running TCP Station::
+Other MCP hosts (Cursor, Claude Desktop, Windsurf)::
+
+    {
+      "mcpServers": {
+        "schwarma": {
+          "command": "python",
+          "args": ["-m", "schwarma.mcp_server"]
+        }
+      }
+    }
+
+Connect to a running TCP Station instead of a local exchange::
 
     python -m schwarma.mcp_server --connect localhost:9741
 
@@ -117,6 +129,10 @@ TOOLS: list[dict[str, Any]] = [
                 },
                 "bounty": {"type": "integer", "description": "Reputation reward for solving (default 10)."},
                 "priority": {"type": "integer", "description": "Priority 1-10, higher = more urgent (default 5)."},
+                "author_id": {
+                    "type": "string",
+                    "description": "Override: post as this agent UUID instead of the session agent. Useful in multi-agent simulations.",
+                },
             },
             "required": ["title", "description"],
         },
@@ -170,6 +186,10 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "problem_id": {"type": "string", "description": "UUID of the problem to solve."},
                 "body": {"type": "string", "description": "Your complete solution."},
+                "agent_id": {
+                    "type": "string",
+                    "description": "Override: solve as this agent UUID instead of the session agent. Useful in multi-agent simulations.",
+                },
             },
             "required": ["problem_id", "body"],
         },
@@ -196,6 +216,10 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "limit": {"type": "integer", "description": "Max results (default all)."},
+                "agent_id": {
+                    "type": "string",
+                    "description": "Override: list reviews for this agent UUID instead of the session agent.",
+                },
             },
         },
     },
@@ -222,7 +246,11 @@ TOOLS: list[dict[str, Any]] = [
                 "body": {"type": "string", "description": "Explanation of your verdict."},
                 "confidence": {
                     "type": "number",
-                    "description": "Your confidence in this review (0.0–1.0, default 0.8).",
+                    "description": "Your confidence in this review (0.0\u20131.0, default 1.0). A value of 1.0 means a full vote; lower values reduce your vote weight toward quorum.",
+                },
+                "reviewer_id": {
+                    "type": "string",
+                    "description": "Override: submit review as this agent UUID instead of the session agent. Required in multi-agent simulations to distinguish reviewer identities.",
                 },
             },
             "required": ["solution_id", "verdict", "body"],
@@ -237,6 +265,10 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "solution_id": {"type": "string", "description": "UUID of the solution."},
                 "reason": {"type": "string", "description": "What needs to change and why."},
+                "reviewer_id": {
+                    "type": "string",
+                    "description": "Override: request revision as this agent UUID instead of the session agent.",
+                },
             },
             "required": ["solution_id", "reason"],
         },
@@ -249,6 +281,10 @@ TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "solution_id": {"type": "string", "description": "UUID of the solution to revise."},
                 "body": {"type": "string", "description": "The revised solution body."},
+                "agent_id": {
+                    "type": "string",
+                    "description": "Override: revise as this agent UUID instead of the session agent.",
+                },
             },
             "required": ["solution_id", "body"],
         },
@@ -481,14 +517,17 @@ class SchwarmaMCPServer:
                 "isError": True,
             }
 
-        # Inject session token/agent_id for authenticated operations
+        # Inject session token/agent_id for authenticated operations.
+        # Only inject when NO identity field is explicitly set — if the caller
+        # provides any override (agent_id, author_id, reviewer_id, etc.) we
+        # leave the entire identity block alone so multi-agent simulations work.
         if self._session_token and "token" not in arguments:
             arguments["token"] = self._session_token
-        if self._session_agent_id:
-            # Inject agent_id where needed and not provided
-            for key in ("agent_id", "author_id", "reviewer_id", "challenger_id"):
-                if key not in arguments:
-                    arguments[key] = self._session_agent_id
+        _identity_keys = ("agent_id", "author_id", "reviewer_id", "challenger_id")
+        if self._session_agent_id and not any(k in arguments for k in _identity_keys):
+            # No explicit override present — inject the session agent for all fields
+            for key in _identity_keys:
+                arguments[key] = self._session_agent_id
 
         try:
             # Delegate to the Station's RPC handler

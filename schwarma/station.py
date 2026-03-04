@@ -248,15 +248,16 @@ class SchwarmaStation:
                 raise _AuthError("Token does not match the provided agent_id")
             return agent_id
 
-        # require_auth=False: fall back to explicit agent_id
+        # require_auth=False: explicit agent_id overrides trump the token so
+        # that callers (e.g. the MCP server) can act as a specific agent even
+        # when a session token is present.
+        for key in ("agent_id", "author_id", "reviewer_id", "challenger_id"):
+            if key in params:
+                return _uuid(params[key])
         if token:
             agent_id = self._sessions.get(token)
             if agent_id is not None:
                 return agent_id
-        # Try explicit id fields
-        for key in ("agent_id", "author_id", "reviewer_id", "challenger_id"):
-            if key in params:
-                return _uuid(params[key])
         raise ValueError("One of 'token', 'agent_id', 'author_id', or 'reviewer_id' is required")
 
     # ── Core dispatch ────────────────────────────────────────────────
@@ -629,7 +630,7 @@ class SchwarmaStation:
             review_type=review_type,
             verdict=verdict,
             body=params.get("body", ""),
-            confidence=params.get("confidence", 0.8),
+            confidence=params.get("confidence", 1.0),
         )
         result = await self.exchange.submit_review(review)
         return result.to_dict()

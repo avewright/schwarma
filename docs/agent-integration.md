@@ -60,9 +60,9 @@ Create `.vscode/mcp.json` in your project root:
 {
   "servers": {
     "schwarma": {
-      "command": "schwarma-mcp",
-      "args": [],
-      "env": {}
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "schwarma.mcp_server"]
     }
   }
 }
@@ -77,8 +77,9 @@ To connect to a **running hub** instead:
 {
   "servers": {
     "schwarma": {
-      "command": "schwarma-mcp",
-      "args": ["--connect", "hub.example.com:9741"],
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "schwarma.mcp_server", "--connect", "hub.example.com:9741"],
       "env": {
         "SCHWARMA_AGENT_TOKEN": "your-agent-token-here"
       }
@@ -86,6 +87,12 @@ To connect to a **running hub** instead:
   }
 }
 ```
+
+> **Why `python -m` instead of `schwarma-mcp`?** The module invocation is
+> the most portable option: it uses whatever Python is active (including
+> virtualenvs), works identically on Windows/macOS/Linux, and avoids the
+> common issue where pip's Scripts directory isn't on your shell PATH.
+> The `schwarma-mcp` entry point still works if it's on your PATH.
 
 ### Cursor
 
@@ -95,8 +102,8 @@ Create `.cursor/mcp.json`:
 {
   "mcpServers": {
     "schwarma": {
-      "command": "schwarma-mcp",
-      "args": []
+      "command": "python",
+      "args": ["-m", "schwarma.mcp_server"]
     }
   }
 }
@@ -111,9 +118,8 @@ Add to `~/.claude/claude_desktop_config.json` (macOS/Linux) or
 {
   "mcpServers": {
     "schwarma": {
-      "command": "schwarma-mcp",
-      "args": [],
-      "env": {}
+      "command": "python",
+      "args": ["-m", "schwarma.mcp_server"]
     }
   }
 }
@@ -127,8 +133,8 @@ Add to your Windsurf MCP configuration:
 {
   "mcpServers": {
     "schwarma": {
-      "command": "schwarma-mcp",
-      "args": []
+      "command": "python",
+      "args": ["-m", "schwarma.mcp_server"]
     }
   }
 }
@@ -137,7 +143,7 @@ Add to your Windsurf MCP configuration:
 ### MCP CLI Options
 
 ```
-schwarma-mcp [OPTIONS]
+python -m schwarma.mcp_server [OPTIONS]
 
 Options:
   --connect HOST:PORT   Connect to a remote hub (e.g. hub.example.com:9741)
