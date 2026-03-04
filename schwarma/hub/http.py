@@ -594,22 +594,39 @@ async def _agent_credentials(hub: "SchwarmaHub", params: dict, query: dict, head
     # Rotate token for an existing linked agent.
     if existing_agent and rotate:
         aid = UUID(str(existing_agent))
+        new_token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=90)
+
+        # Find old token(s) in the in-memory session map
         old_tokens = [t for t, a in hub.station._sessions.items() if a == aid]
-        for token in old_tokens:
-            hub.station._sessions.pop(token, None)
-        await hub.db.delete_agent_sessions(aid)
 
-        token = secrets.token_urlsafe(32)
-        hub.station._sessions[token] = aid
-        await hub.db.save_session(token, aid)
+        # Atomic DB rotation (invalidate old → create new)
+        if old_tokens:
+            rotated = await hub.db.rotate_session(
+                old_tokens[0], new_token, expires_at=expires_at,
+            )
+            # Clean up any additional in-memory tokens
+            for t in old_tokens:
+                hub.station._sessions.pop(t, None)
+            if not rotated:
+                # Fallback: old token already expired/missing in DB
+                await hub.db.delete_agent_sessions(aid)
+                await hub.db.save_session(new_token, aid, expires_at=expires_at)
+        else:
+            # No in-memory tokens; just create fresh
+            await hub.db.delete_agent_sessions(aid)
+            await hub.db.save_session(new_token, aid, expires_at=expires_at)
 
-        env_text = f"SCHWARMA_AGENT_ID={aid}\nSCHWARMA_AGENT_TOKEN={token}"
+        hub.station._sessions[new_token] = aid
+
+        env_text = f"SCHWARMA_AGENT_ID={aid}\nSCHWARMA_AGENT_TOKEN={new_token}"
         return _json({
             "created": False,
             "rotated": True,
             "agent_id": str(aid),
-            "token": token,
-            "env": {"SCHWARMA_AGENT_ID": str(aid), "SCHWARMA_AGENT_TOKEN": token},
+            "token": new_token,
+            "expires_at": expires_at.isoformat(),
+            "env": {"SCHWARMA_AGENT_ID": str(aid), "SCHWARMA_AGENT_TOKEN": new_token},
             "env_text": env_text,
         })
 
@@ -651,7 +668,8 @@ async def _agent_credentials(hub: "SchwarmaHub", params: dict, query: dict, head
             )
 
         # Persist immediately so credentials survive restarts.
-        await hub.db.save_session(token, aid)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=90)
+        await hub.db.save_session(token, aid, expires_at=expires_at)
         await hub.db.link_user_agent(user_id, aid)
 
         env_text = f"SCHWARMA_AGENT_ID={aid}\nSCHWARMA_AGENT_TOKEN={token}"
@@ -660,11 +678,47 @@ async def _agent_credentials(hub: "SchwarmaHub", params: dict, query: dict, head
             "rotated": False,
             "agent_id": str(aid),
             "token": token,
+            "expires_at": expires_at.isoformat(),
             "env": {"SCHWARMA_AGENT_ID": str(aid), "SCHWARMA_AGENT_TOKEN": token},
             "env_text": env_text,
         })
     except Exception as e:
         return _error(str(e), 400)
+
+
+# ── Session rotation (bearer-token auth, no browser required) ────────────
+
+@route("POST", r"/sessions/rotate")
+async def _rotate_session(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """Rotate the calling agent's API key.
+
+    Requires: current valid bearer token in Authorization header.
+    Returns: {agent_id, old_token_prefix, new_token, expires_at}.
+    """
+    auth_header = headers.get("authorization", "")
+    if not auth_header.lower().startswith("bearer "):
+        return _error("Bearer token required", 401)
+    old_token = auth_header[7:].strip()
+    if not old_token:
+        return _error("Bearer token required", 401)
+
+    new_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=90)
+
+    agent_id = await hub.db.rotate_session(old_token, new_token, expires_at=expires_at)
+    if agent_id is None:
+        return _error("Invalid or expired token", 401)
+
+    # Update in-memory session map
+    hub.station._sessions.pop(old_token, None)
+    hub.station._sessions[new_token] = agent_id
+
+    return _json({
+        "agent_id": str(agent_id),
+        "old_token_prefix": old_token[:8] + "…",
+        "new_token": new_token,
+        "expires_at": expires_at.isoformat(),
+    })
 
 
 # ── Agent API endpoints (REST alternative to TCP JSON-RPC) ───────────────
@@ -1615,6 +1669,30 @@ async def _metrics_route(hub: "SchwarmaHub", params: dict, query: dict, headers:
 
 _STATIC_DIR = __import__("pathlib").Path(__file__).resolve().parent / "static"
 
+# Content-Security-Policy for the SPA.  Restricts script/style sources
+# to same-origin and inline (needed for the single-file SPA).
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self'; "
+    "font-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
+
+
+def _html_response(body: bytes, status: int = 200) -> HttpResponse:
+    """Return an HTML response with hardened security headers (CSP, etc.)."""
+    return status, "text/html; charset=utf-8", body, {
+        "Content-Security-Policy": _CSP,
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+    }
+
 
 @route("GET", r"/")
 async def _index(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
@@ -1622,7 +1700,7 @@ async def _index(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -
     index_path = _STATIC_DIR / "index.html"
     try:
         body = index_path.read_bytes()
-        return 200, "text/html; charset=utf-8", body, {}
+        return _html_response(body)
     except FileNotFoundError:
         return _json({"error": "Dashboard not installed — missing static/index.html"}, 404)
 
@@ -1636,7 +1714,7 @@ async def _dashboard(hub: "SchwarmaHub", params: dict, query: dict, headers: dic
     index_path = _STATIC_DIR / "index.html"
     try:
         body = index_path.read_bytes()
-        return 200, "text/html; charset=utf-8", body, {}
+        return _html_response(body)
     except FileNotFoundError:
         return _json({"error": "Dashboard not installed — missing static/index.html"}, 404)
 
@@ -2120,8 +2198,46 @@ async def _dispatch(
     hub: "SchwarmaHub", method: str, path: str, query: dict[str, str],
     headers: dict[str, str] | None = None,
 ) -> HttpResponse:
-    """Match a request to a route and execute the handler."""
+    """Match a request to a route and execute the handler.
+
+    Enforces ``deployment_mode`` access policy:
+
+    * **PUBLIC** — GET read endpoints are open; writes require auth.
+    * **TEAM / PRIVATE** — everything except infra endpoints requires auth.
+    """
     headers = headers or {}
+
+    # ── Deployment-mode gate ──────────────────────────────────────────
+    mode = getattr(hub.config, "deployment_mode", "PRIVATE").upper()
+
+    # Paths that never require auth (infra / login / static assets)
+    _OPEN_PATHS = (
+        "/health", "/ready", "/auth/", "/", "/file.svg",
+    )
+    is_open = any(path == p or path.startswith(p) for p in _OPEN_PATHS)
+
+    # In PUBLIC mode, unauthenticated GET reads are allowed for data endpoints
+    _PUBLIC_READ_PREFIXES = (
+        "/problems", "/solutions", "/reviews", "/leaderboard", "/archive",
+        "/events", "/challenges", "/globs", "/agents", "/stats", "/metrics",
+    )
+
+    if not is_open:
+        needs_auth = True
+        if mode == "PUBLIC" and method == "GET":
+            if any(path == p or path.startswith(p) for p in _PUBLIC_READ_PREFIXES):
+                needs_auth = False
+
+        if needs_auth:
+            user = await _get_current_user(hub, headers)
+            if not user:
+                return _error(
+                    "Authentication required"
+                    + (f" (deployment_mode={mode})" if mode != "PUBLIC" else ""),
+                    401,
+                )
+
+    # ── Route matching ────────────────────────────────────────────────
     for route_method, pattern, handler in _ROUTES:
         if method != route_method:
             continue

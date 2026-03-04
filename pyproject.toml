@@ -15,11 +15,13 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = []
 
@@ -46,7 +48,7 @@ where = ["."]
 include = ["schwarma*"]
 
 [tool.setuptools.package-data]
-"schwarma.hub" = ["schema.sql", "static/*"]
+"schwarma.hub" = ["schema.sql", "static/*", "migrations/*.sql"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

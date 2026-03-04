@@ -76,6 +76,12 @@ class StateError(SchwarmaError):
     code = "INVALID_STATE"
 
 
+class SolverTimeoutError(StateError):
+    """Raised when an agent solver exceeds its allowed execution time."""
+
+    code = "SOLVER_TIMEOUT"
+
+
 class DuplicateError(SchwarmaError):
     """Raised when an idempotency check detects a duplicate operation."""
 

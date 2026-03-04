@@ -28,6 +28,7 @@ from uuid import UUID
 from schwarma.agent import Agent, AgentCapability, ModelTier
 from schwarma.archive import ArchiveEntry
 from schwarma.exchange import Exchange, ExchangeConfig
+from schwarma.glob import Glob, GlobSolution
 from schwarma.problem import Problem, ProblemStatus, ProblemTag
 from schwarma.reputation import ReputationEvent
 from schwarma.review import Review, ReviewType, ReviewVerdict
@@ -128,6 +129,9 @@ def _restore_full(exchange: Exchange, data: dict[str, Any]) -> None:
     _restore_reputation(exchange, data)
     _restore_suspended(exchange, data)
     _restore_archive(exchange, data)
+    _restore_globs(exchange, data)
+    _restore_glob_solutions(exchange, data)
+    _restore_degraded_queue(exchange, data)
 
 
 def _restore_agents(exchange: Exchange, data: dict[str, Any]) -> None:
@@ -290,3 +294,40 @@ def _restore_archive(exchange: Exchange, data: dict[str, Any]) -> None:
         entry.tags = tags
 
         exchange.archive._entries[entry.id] = entry
+
+
+def _restore_globs(exchange: Exchange, data: dict[str, Any]) -> None:
+    """Restore glob coalition objects from snapshot data."""
+    for gid_str, gdata in data.get("globs", {}).items():
+        gid = UUID(gid_str)
+        if gid in exchange._globs:
+            continue
+        try:
+            glob = Glob.from_dict(gdata)
+        except Exception:
+            continue
+        exchange._globs[gid] = glob
+
+
+def _restore_glob_solutions(exchange: Exchange, data: dict[str, Any]) -> None:
+    """Restore glob-solution provenance records from snapshot data."""
+    for sid_str, gs_data in data.get("glob_solutions", {}).items():
+        sid = UUID(sid_str)
+        if sid in exchange._glob_solutions:
+            continue
+        try:
+            gs = GlobSolution.from_dict(gs_data)
+        except Exception:
+            continue
+        exchange._glob_solutions[sid] = gs
+
+
+def _restore_degraded_queue(exchange: Exchange, data: dict[str, Any]) -> None:
+    """Restore graceful degradation queue from snapshot data."""
+    queue = []
+    for pid in data.get("degraded_queue", []):
+        try:
+            queue.append(UUID(pid))
+        except Exception:
+            continue
+    exchange._degraded_queue = queue

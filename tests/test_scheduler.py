@@ -11,6 +11,7 @@ import pytest
 from schwarma.agent import Agent
 from schwarma.exchange import Exchange, ExchangeConfig
 from schwarma.problem import Problem, ProblemStatus
+from schwarma.glob import GlobStatus
 from schwarma.scheduler import Scheduler, SchedulerConfig
 
 
@@ -25,6 +26,7 @@ def _short_config(**overrides: float) -> SchedulerConfig:
     defaults = dict(
         expire_problems_interval=0.05,
         expire_claims_interval=0.05,
+        expire_globs_interval=0.05,
         escalate_bounties_interval=0.05,
         escalate_bounties_stale_seconds=0.0,  # treat everything as stale
         reputation_decay_interval=0.05,
@@ -47,7 +49,7 @@ class TestLifecycle:
 
         await sched.start()
         assert sched.running
-        assert sched.active_tasks == 6  # all 6 jobs enabled
+        assert sched.active_tasks == 7  # all 7 jobs enabled
 
         await sched.stop()
         assert not sched.running
@@ -84,6 +86,7 @@ class TestLifecycle:
         cfg = SchedulerConfig(
             expire_problems_interval=0,
             expire_claims_interval=0,
+            expire_globs_interval=0,
             escalate_bounties_interval=0.05,
             reputation_decay_interval=0,
             archive_expiry_interval=0,
@@ -120,6 +123,7 @@ class TestJobs:
 
         sched_cfg = _short_config(
             expire_claims_interval=0,
+            expire_globs_interval=0,
             escalate_bounties_interval=0,
             reputation_decay_interval=0,
             archive_expiry_interval=0,
@@ -156,6 +160,7 @@ class TestJobs:
 
         sched_cfg = _short_config(
             expire_problems_interval=0,
+            expire_globs_interval=0,
             escalate_bounties_interval=0,
             reputation_decay_interval=0,
             archive_expiry_interval=0,
@@ -165,6 +170,45 @@ class TestJobs:
             await asyncio.sleep(0.15)
 
         assert problem.status == ProblemStatus.OPEN
+
+    @pytest.mark.asyncio
+    async def test_expire_globs_fires(self):
+        """Scheduler should disband inactive globs when timeout is enabled."""
+        cfg = ExchangeConfig(
+            min_reputation_to_claim=0,
+            enable_staking=False,
+            glob_timeout_seconds=1,
+        )
+        ex = Exchange(cfg)
+        author = Agent(name="Author", solver=_dummy_solver)
+        coordinator = Agent(name="Coordinator", solver=_dummy_solver)
+        ex.register(author)
+        ex.register(coordinator)
+
+        problem = await ex.post_problem(Problem(
+            title="Glob target",
+            description="collaborative work",
+            author_id=author.id,
+        ))
+        glob = await ex.form_glob(coordinator_id=coordinator.id, problem_id=problem.id, name="stale-glob")
+
+        # Backdate activity to force timeout
+        glob.created_at = datetime.now(timezone.utc) - timedelta(seconds=5)
+        for m in glob.memberships:
+            m.joined_at = datetime.now(timezone.utc) - timedelta(seconds=5)
+
+        sched_cfg = _short_config(
+            expire_problems_interval=0,
+            expire_claims_interval=0,
+            escalate_bounties_interval=0,
+            reputation_decay_interval=0,
+            archive_expiry_interval=0,
+            skill_decay_interval=0,
+        )
+        async with Scheduler(ex, sched_cfg):
+            await asyncio.sleep(0.15)
+
+        assert glob.status == GlobStatus.DISBANDED
 
     @pytest.mark.asyncio
     async def test_escalate_bounties_fires(self):
@@ -189,6 +233,7 @@ class TestJobs:
         sched_cfg = _short_config(
             expire_problems_interval=0,
             expire_claims_interval=0,
+            expire_globs_interval=0,
             escalate_bounties_stale_seconds=0.0,  # everything is stale
             reputation_decay_interval=0,
             archive_expiry_interval=0,
@@ -205,6 +250,7 @@ class TestJobs:
         cfg = SchedulerConfig()
         assert cfg.expire_problems_interval == 60.0
         assert cfg.expire_claims_interval == 30.0
+        assert cfg.expire_globs_interval == 60.0
         assert cfg.escalate_bounties_interval == 300.0
         assert cfg.reputation_decay_interval == 3600.0
         assert cfg.archive_expiry_interval == 3600.0
@@ -230,6 +276,7 @@ class TestJobs:
 
         sched_cfg = _short_config(
             expire_claims_interval=0,
+            expire_globs_interval=0,
             escalate_bounties_interval=0,
             reputation_decay_interval=0,
             archive_expiry_interval=0,

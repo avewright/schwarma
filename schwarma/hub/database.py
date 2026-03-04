@@ -95,12 +95,93 @@ class Database:
         return self._pool
 
     async def _migrate(self) -> None:
-        """Run schema.sql to ensure all tables exist."""
-        schema_path = Path(__file__).parent / "schema.sql"
-        sql = schema_path.read_text(encoding="utf-8")
+        """Run versioned migrations.
+
+        Maintains a ``schema_migrations`` table to track which numbered
+        migration files have already been applied.  Only new migrations
+        are executed, and each runs inside its own transaction.
+        """
         async with self.pool.acquire() as conn:
-            await conn.execute(sql)
-        logger.info("Database schema applied")
+            # Ensure the tracking table exists (idempotent)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version  INTEGER PRIMARY KEY,
+                    name     TEXT NOT NULL DEFAULT '',
+                    applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """)
+
+            # Determine already-applied versions
+            rows = await conn.fetch("SELECT version FROM schema_migrations ORDER BY version")
+            applied: set[int] = {r["version"] for r in rows}
+
+            # Discover migration files on disk
+            migrations_dir = Path(__file__).parent / "migrations"
+            if not migrations_dir.is_dir():
+                # Fallback: run legacy schema.sql for fresh installs without
+                # the migrations directory (e.g. editable dev installs).
+                schema_path = Path(__file__).parent / "schema.sql"
+                if schema_path.exists() and not applied:
+                    sql = schema_path.read_text(encoding="utf-8")
+                    await conn.execute(sql)
+                    await conn.execute(
+                        "INSERT INTO schema_migrations (version, name) VALUES ($1, $2)",
+                        0, "legacy_schema_sql",
+                    )
+                logger.info("Database schema applied (legacy mode)")
+                return
+
+            migration_files: list[tuple[int, str, Path]] = []
+            for f in sorted(migrations_dir.iterdir()):
+                if not f.suffix == ".sql":
+                    continue
+                # Expected format: 001_description.sql
+                parts = f.stem.split("_", 1)
+                try:
+                    version = int(parts[0])
+                except (ValueError, IndexError):
+                    continue
+                migration_files.append((version, f.stem, f))
+
+            # Apply new migrations in order
+            new_count = 0
+            for version, name, path in sorted(migration_files):
+                if version in applied:
+                    continue
+                sql = path.read_text(encoding="utf-8")
+                async with conn.transaction():
+                    await conn.execute(sql)
+                    await conn.execute(
+                        "INSERT INTO schema_migrations (version, name) VALUES ($1, $2)",
+                        version, name,
+                    )
+                new_count += 1
+                logger.info("Applied migration %03d: %s", version, name)
+
+        if new_count:
+            logger.info("Database migrations complete — %d new migration(s) applied", new_count)
+        else:
+            logger.info("Database schema up to date")
+
+    # ── Transaction helper ───────────────────────────────────────────
+
+    def transaction(self):
+        """Return an async context manager that provides a transactional connection.
+
+        Usage::
+
+            async with db.transaction() as conn:
+                await conn.execute(...)
+                await conn.execute(...)
+            # auto-commit on exit, auto-rollback on exception
+        """
+        return _Transaction(self.pool)
+
+    @staticmethod
+    def _target(conn: Any | None, pool: "asyncpg.Pool") -> Any:
+        """Return *conn* when a transactional connection is provided,
+        otherwise fall back to the connection *pool*."""
+        return conn if conn is not None else pool
 
     # ── Agents ───────────────────────────────────────────────────────
 
@@ -115,8 +196,10 @@ class Database:
         is_suspended: bool = False,
         total_solved: int = 0,
         total_reviewed: int = 0,
+        conn: Any | None = None,
     ) -> None:
-        await self.pool.execute(
+        target = self._target(conn, self.pool)
+        await target.execute(
             """
             INSERT INTO agents (id, name, model_tier, capabilities, metadata,
                                 is_suspended, total_solved, total_reviewed)
@@ -144,17 +227,19 @@ class Database:
         rows = await self.pool.fetch("SELECT * FROM agents ORDER BY created_at")
         return [dict(r) for r in rows]
 
-    async def set_agent_suspended(self, agent_id: UUID, suspended: bool) -> None:
-        await self.pool.execute(
+    async def set_agent_suspended(self, agent_id: UUID, suspended: bool, *, conn: Any | None = None) -> None:
+        target = self._target(conn, self.pool)
+        await target.execute(
             "UPDATE agents SET is_suspended = $2, updated_at = now() WHERE id = $1",
             agent_id, suspended,
         )
 
     # ── Problems ─────────────────────────────────────────────────────
 
-    async def upsert_problem(self, data: dict[str, Any]) -> None:
+    async def upsert_problem(self, data: dict[str, Any], *, conn: Any | None = None) -> None:
         """Upsert a problem from its ``to_dict()`` representation."""
-        await self.pool.execute(
+        target = self._target(conn, self.pool)
+        await target.execute(
             """
             INSERT INTO problems (
                 id, title, description, author_id, status, tags, priority,
@@ -248,9 +333,10 @@ class Database:
 
     # ── Solutions ────────────────────────────────────────────────────
 
-    async def upsert_solution(self, data: dict[str, Any]) -> None:
+    async def upsert_solution(self, data: dict[str, Any], *, conn: Any | None = None) -> None:
         """Upsert a solution from its ``to_dict()`` representation."""
-        await self.pool.execute(
+        target = self._target(conn, self.pool)
+        await target.execute(
             """
             INSERT INTO solutions (
                 id, problem_id, author_id, body, verdict,
@@ -291,9 +377,10 @@ class Database:
 
     # ── Reviews ──────────────────────────────────────────────────────
 
-    async def upsert_review(self, data: dict[str, Any]) -> None:
+    async def upsert_review(self, data: dict[str, Any], *, conn: Any | None = None) -> None:
         """Upsert a review from its ``to_dict()`` representation."""
-        await self.pool.execute(
+        target = self._target(conn, self.pool)
+        await target.execute(
             """
             INSERT INTO reviews (
                 id, solution_id, reviewer_id, review_type, verdict,
@@ -333,27 +420,36 @@ class Database:
         delta: int,
         reason: str = "",
         related_id: UUID | None = None,
+        conn: Any | None = None,
     ) -> None:
-        async with self.pool.acquire() as conn:
-            async with conn.transaction():
-                await conn.execute(
-                    """
-                    INSERT INTO reputation_events (id, agent_id, event_type, delta, reason, related_id)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (id) DO NOTHING
-                    """,
-                    id, agent_id, event_type, delta, reason, related_id,
-                )
-                await conn.execute(
-                    """
-                    INSERT INTO reputation_balances (agent_id, balance, updated_at)
-                    VALUES ($1, 50 + $2, now())
-                    ON CONFLICT (agent_id) DO UPDATE SET
-                        balance = reputation_balances.balance + $2,
-                        updated_at = now()
-                    """,
-                    agent_id, delta,
-                )
+        async def _run(c):
+            await c.execute(
+                """
+                INSERT INTO reputation_events (id, agent_id, event_type, delta, reason, related_id)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (id) DO NOTHING
+                """,
+                id, agent_id, event_type, delta, reason, related_id,
+            )
+            await c.execute(
+                """
+                INSERT INTO reputation_balances (agent_id, balance, updated_at)
+                VALUES ($1, 50 + $2, now())
+                ON CONFLICT (agent_id) DO UPDATE SET
+                    balance = reputation_balances.balance + $2,
+                    updated_at = now()
+                """,
+                agent_id, delta,
+            )
+
+        if conn is not None:
+            # Caller already owns the transaction
+            await _run(conn)
+        else:
+            # Standalone call — open our own transaction
+            async with self.pool.acquire() as c:
+                async with c.transaction():
+                    await _run(c)
 
     async def get_reputation(self, agent_id: UUID) -> int:
         row = await self.pool.fetchrow(
@@ -445,9 +541,10 @@ class Database:
 
     # ── Archive ──────────────────────────────────────────────────────
 
-    async def upsert_archive_entry(self, data: dict[str, Any]) -> None:
+    async def upsert_archive_entry(self, data: dict[str, Any], *, conn: Any | None = None) -> None:
         """Upsert an archive entry from its ``to_dict()`` representation."""
-        await self.pool.execute(
+        target = self._target(conn, self.pool)
+        await target.execute(
             """
             INSERT INTO archive_entries (
                 id, problem_id, solution_id, problem_title, problem_description,
@@ -542,27 +639,64 @@ class Database:
 
     # ── Sessions ─────────────────────────────────────────────────────
 
-    async def save_session(self, token: str, agent_id: UUID) -> None:
-        await self.pool.execute(
+    async def save_session(
+        self, token: str, agent_id: UUID, *,
+        conn: Any | None = None,
+        expires_at: datetime | None = None,
+    ) -> None:
+        target = self._target(conn, self.pool)
+        await target.execute(
             """
-            INSERT INTO sessions (token, agent_id)
-            VALUES ($1, $2)
+            INSERT INTO sessions (token, agent_id, expires_at)
+            VALUES ($1, $2, $3)
             ON CONFLICT (token) DO UPDATE SET last_seen = now()
             """,
-            token, agent_id,
+            token, agent_id, expires_at,
         )
 
     async def get_session_agent(self, token: str) -> UUID | None:
         row = await self.pool.fetchrow(
-            "SELECT agent_id FROM sessions WHERE token = $1", token,
+            """SELECT agent_id FROM sessions
+               WHERE token = $1
+                 AND (expires_at IS NULL OR expires_at > now())""",
+            token,
         )
         return row["agent_id"] if row else None
 
     # Alias for HTTP API bearer-token auth
     get_agent_for_session = get_session_agent
 
+    async def rotate_session(self, old_token: str, new_token: str, *, expires_at: datetime | None = None) -> UUID | None:
+        """Rotate an API key: invalidate *old_token* and create *new_token*.
+
+        Returns the agent_id on success, or None if the old token was invalid.
+        """
+        async with self.pool.acquire() as c:
+            async with c.transaction():
+                row = await c.fetchrow(
+                    """SELECT agent_id FROM sessions
+                       WHERE token = $1
+                         AND (expires_at IS NULL OR expires_at > now())""",
+                    old_token,
+                )
+                if not row:
+                    return None
+                agent_id = row["agent_id"]
+                # Invalidate old
+                await c.execute("DELETE FROM sessions WHERE token = $1", old_token)
+                # Issue new
+                await c.execute(
+                    """INSERT INTO sessions (token, agent_id, expires_at, rotated_from)
+                       VALUES ($1, $2, $3, $4)""",
+                    new_token, agent_id, expires_at, old_token,
+                )
+                return agent_id
+
     async def load_all_sessions(self) -> dict[str, UUID]:
-        rows = await self.pool.fetch("SELECT token, agent_id FROM sessions")
+        rows = await self.pool.fetch(
+            """SELECT token, agent_id FROM sessions
+               WHERE expires_at IS NULL OR expires_at > now()"""
+        )
         return {r["token"]: r["agent_id"] for r in rows}
 
     async def delete_agent_sessions(self, agent_id: UUID) -> None:
@@ -792,6 +926,37 @@ class Database:
     async def promote_to_admin(self, user_id: UUID) -> None:
         """Promote a user to admin."""
         await self.pool.execute("UPDATE users SET is_admin = TRUE WHERE id = $1", user_id)
+
+
+# ── Transaction context manager ──────────────────────────────────────────
+
+class _Transaction:
+    """Async context manager providing a transactional DB connection.
+
+    On ``__aenter__`` acquires a connection and begins a transaction.
+    On ``__aexit__`` commits on success or rolls back on exception.
+    """
+
+    def __init__(self, pool: "asyncpg.Pool") -> None:
+        self._pool = pool
+        self._conn: Any = None
+        self._tr: Any = None
+
+    async def __aenter__(self):
+        self._conn = await self._pool.acquire()
+        self._tr = self._conn.transaction()
+        await self._tr.start()
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if exc_type is None:
+                await self._tr.commit()
+            else:
+                await self._tr.rollback()
+        finally:
+            await self._pool.release(self._conn)
+        return False
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────

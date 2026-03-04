@@ -131,6 +131,7 @@ class TestExchangeSync(unittest.IsolatedAsyncioTestCase):
     """Test the sync layer with a mocked database."""
 
     async def _make_sync(self):
+        from contextlib import asynccontextmanager
         from schwarma.hub.database import Database
         from schwarma.hub.sync import ExchangeSync
         from schwarma.station import SchwarmaStation
@@ -155,6 +156,17 @@ class TestExchangeSync(unittest.IsolatedAsyncioTestCase):
         db.set_agent_suspended = AsyncMock()
         db.record_reputation_event = AsyncMock()
         db.stats = AsyncMock(return_value={"agents": 0, "problems": 0})
+
+        # Mock transaction() — yield a mock connection with async execute
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+
+        @asynccontextmanager
+        async def _fake_txn():
+            yield mock_conn
+
+        db.transaction = _fake_txn
+        db._mock_conn = mock_conn  # expose for assertions
 
         sync = ExchangeSync(station, db)
         return sync, station, db
@@ -222,15 +234,32 @@ class TestExchangeSync(unittest.IsolatedAsyncioTestCase):
         sync.attach()
 
         from schwarma.events import Event, EventKind
+        agent_id = uuid4()
         event = Event(
             kind=EventKind.AGENT_REGISTERED,
-            source_agent_id=uuid4(),
+            source_agent_id=agent_id,
         )
+
+        # The new _on_event opens a transaction and writes directly via conn.
+        # Mock db.transaction() to yield a mock connection whose execute we
+        # can inspect.
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+
+        from contextlib import asynccontextmanager
+        @asynccontextmanager
+        async def _fake_txn():
+            yield mock_conn
+
+        db.transaction = _fake_txn
+
         await sync._on_event(event)
 
-        db.log_event.assert_called_once()
-        call_kwargs = db.log_event.call_args[1]
-        assert call_kwargs["kind"] == "AGENT_REGISTERED"
+        # The event_log INSERT should have been called on the conn
+        mock_conn.execute.assert_called()
+        insert_call = mock_conn.execute.call_args_list[0]
+        assert "INSERT INTO event_log" in insert_call.args[0]
+        assert insert_call.args[1] == "AGENT_REGISTERED"
 
     async def test_full_snapshot_calls_db(self):
         sync, station, db = await self._make_sync()
@@ -1464,6 +1493,7 @@ class TestWriteEndpoints(unittest.IsolatedAsyncioTestCase):
         aid = uuid4()
         hub = _mock_hub_with_auth(agent_id=str(aid))
         hub.station._sessions = {"old-token-1": aid, "old-token-2": aid}
+        hub.db.rotate_session = AsyncMock(return_value=aid)
         headers = {"cookie": "schwarma_session=tok"}
         with patch("schwarma.hub.http.secrets.token_urlsafe", return_value="new-token-xyz"):
             status, ct, body, hdrs = await _dispatch(
@@ -1474,9 +1504,55 @@ class TestWriteEndpoints(unittest.IsolatedAsyncioTestCase):
         assert data["created"] is False
         assert data["rotated"] is True
         assert data["token"] == "new-token-xyz"
+        assert "expires_at" in data
         assert hub.station._sessions == {"new-token-xyz": aid}
-        hub.db.delete_agent_sessions.assert_called_once()
-        hub.db.save_session.assert_called_once()
+        hub.db.rotate_session.assert_called_once()
+
+
+# ── Session rotation endpoint tests ─────────────────────────────────────
+
+class TestSessionRotation(unittest.IsolatedAsyncioTestCase):
+    """Test the POST /sessions/rotate bearer-token rotation endpoint."""
+
+    async def test_rotate_no_bearer(self):
+        from schwarma.hub.http import _dispatch
+        hub = _mock_hub_with_auth()
+        status, ct, body, hdrs = await _dispatch(
+            hub, "POST", "/sessions/rotate", {}, {},
+        )
+        assert status == 401
+
+    async def test_rotate_invalid_token(self):
+        from schwarma.hub.http import _dispatch
+        hub = _mock_hub_with_auth()
+        hub.db.rotate_session = AsyncMock(return_value=None)
+        headers = {"authorization": "Bearer bad-token"}
+        status, ct, body, hdrs = await _dispatch(
+            hub, "POST", "/sessions/rotate", {}, headers,
+        )
+        assert status == 401
+        assert "Invalid or expired" in json.loads(body)["error"]
+
+    async def test_rotate_success(self):
+        from schwarma.hub.http import _dispatch
+        aid = uuid4()
+        hub = _mock_hub_with_auth()
+        hub.station._sessions = {"old-tok": aid}
+        hub.db.rotate_session = AsyncMock(return_value=aid)
+        # Also mock get_agent_for_session so the deployment-mode gate passes auth
+        hub.db.get_agent_for_session = AsyncMock(return_value=aid)
+        headers = {"authorization": "Bearer old-tok"}
+        with patch("schwarma.hub.http.secrets.token_urlsafe", return_value="fresh-tok"):
+            status, ct, body, hdrs = await _dispatch(
+                hub, "POST", "/sessions/rotate", {}, headers,
+            )
+        assert status == 200
+        data = json.loads(body)
+        assert data["agent_id"] == str(aid)
+        assert data["new_token"] == "fresh-tok"
+        assert "expires_at" in data
+        assert "old-tok" not in hub.station._sessions
+        assert hub.station._sessions.get("fresh-tok") == aid
 
 
 # ── Admin endpoint tests ────────────────────────────────────────────────

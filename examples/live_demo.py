@@ -1,4 +1,18 @@
 """
+live_demo.py -- DEPRECATED.  Use hub_demo.py instead.
+
+    python examples/hub_demo.py
+
+This file runs an in-process Exchange with a self-hosted SSE event log.
+That event log is superseded by the hub dashboard at http://localhost:8741.
+
+To run the hub-connected demo (recommended):
+    docker compose up -d
+    python examples/hub_demo.py
+
+The remainder of this file is kept for reference only.
+
+--------------------------------------------------------------------
 live_demo.py -- Schwarma live collaborative demo in your browser.
 
 Runs a real multi-agent exchange where every agent is backed by your LLM.

@@ -10,6 +10,7 @@ import pytest
 
 from schwarma.agent import Agent, AgentCapability, ModelTier
 from schwarma.exchange import Exchange, ExchangeConfig
+from schwarma.glob import GlobStatus
 from schwarma.persistence import (
     load_snapshot,
     restore_from_dict,
@@ -217,3 +218,74 @@ class TestEdgeCases:
         p = ex2._problems[refs["problem"].id]
         original = ex._problems[refs["problem"].id]
         assert p.status == original.status
+
+
+class TestGlobPersistence:
+    @pytest.mark.asyncio
+    async def test_globs_and_glob_solutions_roundtrip(self, tmp_path):
+        cfg = ExchangeConfig(
+            min_reputation_to_claim=0,
+            enable_staking=False,
+            enable_content_guards=False,
+            enable_effort_guards=False,
+        )
+        ex = Exchange(cfg)
+
+        poster = Agent(name="Poster", solver=_dummy_solver, capabilities={AgentCapability.CODE_GENERATION})
+        coordinator = Agent(name="Coord", solver=_dummy_solver, capabilities={AgentCapability.CODE_GENERATION})
+        member = Agent(name="Member", solver=_dummy_solver, capabilities={AgentCapability.CODE_GENERATION})
+        for a in (poster, coordinator, member):
+            ex.register(a)
+
+        problem = Problem(
+            title="Glob Problem",
+            description="Need coalition work",
+            author_id=poster.id,
+            tags={ProblemTag.ARCHITECTURE},
+            bounty=30,
+        )
+        await ex.post_problem(problem)
+
+        glob = await ex.form_glob(coordinator_id=coordinator.id, problem_id=problem.id, name="roundtrip-glob")
+        await ex.join_glob(glob.id, member.id, subtask="research")
+        await ex.submit_to_glob(glob.id, member.id, "member contribution")
+        await ex.accept_glob_contribution(glob.id, coordinator.id, member.id)
+        solution = await ex.assemble_glob_solution(glob.id, coordinator.id, "final assembly")
+
+        assert glob.status == GlobStatus.DISSOLVED
+        assert solution.id in ex._glob_solutions
+
+        save_snapshot(ex, tmp_path / "state.json")
+        ex2 = load_snapshot(tmp_path / "state.json")
+
+        assert glob.id in ex2._globs
+        assert ex2._globs[glob.id].status == GlobStatus.DISSOLVED
+        assert len(ex2._globs[glob.id].memberships) == 2
+        assert solution.id in ex2._glob_solutions
+        gs2 = ex2._glob_solutions[solution.id]
+        assert gs2.glob_id == glob.id
+        assert "member contribution" in " ".join(gs2.member_contributions.values())
+
+
+class TestGracefulDegradationPersistence:
+    @pytest.mark.asyncio
+    async def test_degraded_queue_roundtrip(self, tmp_path):
+        cfg = ExchangeConfig(
+            min_reputation_to_claim=0,
+            enable_staking=False,
+            auto_assign=True,
+        )
+        ex = Exchange(cfg)
+        author = Agent(name="Author", solver=_dummy_solver)
+        ex.register(author)
+
+        p = await ex.post_problem(Problem(
+            title="Queued",
+            description="No solver available",
+            author_id=author.id,
+        ))
+        assert p.id in ex._degraded_queue
+
+        save_snapshot(ex, tmp_path / "state.json")
+        ex2 = load_snapshot(tmp_path / "state.json")
+        assert p.id in ex2._degraded_queue

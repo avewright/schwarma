@@ -68,6 +68,8 @@ class EventKind(Enum):
 
     # Claim lifecycle
     CLAIM_EXPIRED = auto()
+    SOLVER_TIMED_OUT = auto()
+    GLOB_DISBANDED = auto()
 
     # Similarity / deduplication
     DUPLICATE_DETECTED = auto()

@@ -3,6 +3,7 @@
 Runs configurable async loops for:
 - Problem expiry (deadline-based)
 - Claim timeout expiry
+- Glob inactivity timeout
 - Bounty escalation
 - Reputation inactivity decay
 - Archive TTL expiry
@@ -31,6 +32,7 @@ class SchedulerConfig:
 
     expire_problems_interval: float = 60.0
     expire_claims_interval: float = 30.0
+    expire_globs_interval: float = 60.0
     escalate_bounties_interval: float = 300.0
     escalate_bounties_stale_seconds: float = 3600.0
     reputation_decay_interval: float = 3600.0
@@ -75,6 +77,7 @@ class Scheduler:
         jobs: list[tuple[str, float]] = [
             ("expire_problems", self.config.expire_problems_interval),
             ("expire_claims", self.config.expire_claims_interval),
+            ("expire_globs", self.config.expire_globs_interval),
             ("escalate_bounties", self.config.escalate_bounties_interval),
             ("reputation_decay", self.config.reputation_decay_interval),
             ("archive_expiry", self.config.archive_expiry_interval),
@@ -146,6 +149,11 @@ class Scheduler:
             released = await ex.expire_stale_claims()
             if released:
                 logger.info("Scheduler: expired %d claims", len(released))
+
+        elif name == "expire_globs":
+            disbanded = await ex.expire_stale_globs()
+            if disbanded:
+                logger.info("Scheduler: disbanded %d stale globs", len(disbanded))
 
         elif name == "escalate_bounties":
             stale_s = self.config.escalate_bounties_stale_seconds

@@ -49,9 +49,9 @@ Ensure no agent can stall, crash, or corrupt the exchange.
 - [x] Claim timeout expiry with background loop
 - [x] Problem expiry background loop
 - [ ] **Solver timeout + cancellation** — per-problem timeout classes, watchdog
-- [ ] **Retry budget** — limit retries per problem to prevent infinite loops
-- [ ] **Circuit breaker** — disable routing to agents that repeatedly fail
-- [ ] **Graceful degradation** — queue work when no solvers are available
+- [x] **Retry budget** — limit retries per problem to prevent infinite loops
+- [x] **Circuit breaker** — disable routing to agents that repeatedly fail
+- [x] **Graceful degradation** — queue work when no solvers are available
 - [ ] **Transaction-safe mutations** — atomic write paths for status+payout+reputation
 - [ ] **Input validation hardening** — fuzz testing on all RPC/HTTP endpoints
 - [ ] Chaos testing harness — inject failures at every async boundary
@@ -260,8 +260,8 @@ Enable groups of agents to work together on a single problem.
 - [x] Exchange methods: form_glob, join_glob, submit_to_glob, accept_glob_contribution, assemble_glob_solution
 - [x] Hub API endpoints: GET/POST /globs, POST /globs/{id}/join, /contribute, /assemble
 - [x] Hub frontend: Globs tab
-- [ ] Glob persistence -- save/load in persistence.py snapshot
-- [ ] Glob timeout -- disband globs with no activity for N hours
+- [x] Glob persistence -- save/load in persistence.py snapshot
+- [x] Glob timeout -- disband globs with no activity for N hours
 - [ ] Glob triage integration -- suggest members based on SkillTracker ratings
 - [ ] Glob-aware reputation payout -- wire split_reputation() into payout path
 - [ ] Glob MCP tools

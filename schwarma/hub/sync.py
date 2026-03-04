@@ -13,6 +13,7 @@ and PostgreSQL is the durable store that survives restarts.
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -132,30 +133,46 @@ class ExchangeSync:
         logger.info("EventBus → Database sync attached")
 
     async def _on_event(self, event: Event) -> None:
-        """Handle an exchange event by persisting the relevant state."""
-        try:
-            # Always log the event
-            await self.db.log_event(
-                kind=event.kind.name,
-                source_agent_id=event.source_agent_id,
-                target_agent_id=event.target_agent_id,
-                problem_id=event.problem_id,
-                solution_id=event.solution_id,
-                review_id=event.review_id,
-                payload=event.payload,
-            )
+        """Handle an exchange event by persisting the relevant state.
 
-            # Route to specific handlers
+        The event log write and the domain-specific handler run inside a
+        single database transaction so either both succeed or neither does.
+        """
+        try:
+            # Events that touch multiple tables use an explicit transaction
+            # to guarantee atomicity (e.g. solution verdict + problem update
+            # + archive write).  Single-table events get the same treatment
+            # for consistency and WAL ordering.
             handler = _EVENT_HANDLERS.get(event.kind)
-            if handler:
-                await handler(self, event)
+            async with self.db.transaction() as conn:
+                # Always log the event first (WAL-style)
+                await conn.execute(
+                    """
+                    INSERT INTO event_log (kind, source_agent_id, target_agent_id,
+                                           problem_id, solution_id, review_id, payload)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+                    """,
+                    event.kind.name,
+                    event.source_agent_id,
+                    event.target_agent_id,
+                    event.problem_id,
+                    event.solution_id,
+                    event.review_id,
+                    json.dumps(event.payload or {}),
+                )
+
+                # Route to specific handler (receives the transactional conn)
+                if handler:
+                    await handler(self, event, conn)
 
         except Exception:
             logger.exception("Failed to sync event %s to database", event.kind.name)
 
     # ── Event-specific sync handlers ─────────────────────────────────
+    # All handlers receive the transactional ``conn`` from ``_on_event``
+    # so that the event-log write and every domain write are atomic.
 
-    async def _sync_agent_registered(self, event: Event) -> None:
+    async def _sync_agent_registered(self, event: Event, conn: Any) -> None:
         agent_id = event.source_agent_id
         if agent_id and agent_id in self.exchange._agents:
             agent = self.exchange._agents[agent_id]
@@ -165,60 +182,61 @@ class ExchangeSync:
                 model_tier=agent.model_tier.name,
                 capabilities=[c.name for c in agent.capabilities],
                 metadata=agent.metadata,
+                conn=conn,
             )
             # Persist the session token if available
             for token, aid in self.station._sessions.items():
                 if aid == agent_id:
-                    await self.db.save_session(token, agent_id)
+                    await self.db.save_session(token, agent_id, conn=conn)
                     break
 
-    async def _sync_agent_suspended(self, event: Event) -> None:
+    async def _sync_agent_suspended(self, event: Event, conn: Any) -> None:
         agent_id = event.target_agent_id or event.source_agent_id
         if agent_id:
             is_suspended = agent_id in self.exchange._suspended
-            await self.db.set_agent_suspended(agent_id, is_suspended)
+            await self.db.set_agent_suspended(agent_id, is_suspended, conn=conn)
 
-    async def _sync_problem_posted(self, event: Event) -> None:
+    async def _sync_problem_posted(self, event: Event, conn: Any) -> None:
         pid = event.problem_id
         if pid and pid in self.exchange._problems:
             p = self.exchange._problems[pid]
-            await self.db.upsert_problem(p.to_dict())
+            await self.db.upsert_problem(p.to_dict(), conn=conn)
 
-    async def _sync_problem_update(self, event: Event) -> None:
+    async def _sync_problem_update(self, event: Event, conn: Any) -> None:
         """Generic problem state change (claimed, solved, closed, etc.)."""
         pid = event.problem_id
         if pid and pid in self.exchange._problems:
             p = self.exchange._problems[pid]
-            await self.db.upsert_problem(p.to_dict())
+            await self.db.upsert_problem(p.to_dict(), conn=conn)
 
-    async def _sync_solution_submitted(self, event: Event) -> None:
+    async def _sync_solution_submitted(self, event: Event, conn: Any) -> None:
         sid = event.solution_id
         if sid and sid in self.exchange._solutions:
             s = self.exchange._solutions[sid]
-            await self.db.upsert_solution(s.to_dict())
+            await self.db.upsert_solution(s.to_dict(), conn=conn)
             # Also update the parent problem
-            await self._sync_problem_update(event)
+            await self._sync_problem_update(event, conn)
 
-    async def _sync_solution_verdict(self, event: Event) -> None:
+    async def _sync_solution_verdict(self, event: Event, conn: Any) -> None:
         sid = event.solution_id
         if sid and sid in self.exchange._solutions:
             s = self.exchange._solutions[sid]
-            await self.db.upsert_solution(s.to_dict())
+            await self.db.upsert_solution(s.to_dict(), conn=conn)
         # Problem state may have changed too
-        await self._sync_problem_update(event)
+        await self._sync_problem_update(event, conn)
 
-    async def _sync_review_submitted(self, event: Event) -> None:
+    async def _sync_review_submitted(self, event: Event, conn: Any) -> None:
         rid = event.review_id
         if rid and rid in self.exchange._reviews:
             r = self.exchange._reviews[rid]
-            await self.db.upsert_review(r.to_dict())
+            await self.db.upsert_review(r.to_dict(), conn=conn)
             # Update solution's review_ids
             sid = r.solution_id
             if sid in self.exchange._solutions:
                 s = self.exchange._solutions[sid]
-                await self.db.upsert_solution(s.to_dict())
+                await self.db.upsert_solution(s.to_dict(), conn=conn)
 
-    async def _sync_reputation_changed(self, event: Event) -> None:
+    async def _sync_reputation_changed(self, event: Event, conn: Any) -> None:
         agent_id = event.target_agent_id or event.source_agent_id
         if not agent_id:
             return
@@ -231,20 +249,21 @@ class ExchangeSync:
             delta=payload.get("delta", 0),
             reason=payload.get("reason", ""),
             related_id=event.problem_id or event.solution_id,
+            conn=conn,
         )
 
-    async def _sync_archive(self, event: Event) -> None:
+    async def _sync_archive(self, event: Event, conn: Any) -> None:
         """When a solution is accepted, the exchange archives it."""
         pid = event.problem_id
         if pid:
             entry = self.exchange.archive.get_by_problem(pid)
             if entry:
-                await self.db.upsert_archive_entry(entry.to_dict())
+                await self.db.upsert_archive_entry(entry.to_dict(), conn=conn)
 
-    async def _sync_solution_accepted(self, event: Event) -> None:
+    async def _sync_solution_accepted(self, event: Event, conn: Any) -> None:
         """Combined handler for SOLUTION_ACCEPTED — update verdict AND archive."""
-        await self._sync_solution_verdict(event)
-        await self._sync_archive(event)
+        await self._sync_solution_verdict(event, conn)
+        await self._sync_archive(event, conn)
 
     # ── Full snapshot (safety net) ───────────────────────────────────
 

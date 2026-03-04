@@ -1,5 +1,7 @@
 """Tests for the Exchange orchestrator — the core integration tests."""
 
+import asyncio
+
 import pytest
 
 from schwarma.agent import Agent, AgentCapability
@@ -8,6 +10,7 @@ from schwarma.errors import (
     DuplicateError,
     NotFoundError,
     PermissionError_,
+    SolverTimeoutError,
     StateError,
     SuspendedError,
     ValidationError,
@@ -885,6 +888,7 @@ class TestStatistics:
         assert stats["total_problems"] == 0
         assert stats["total_solutions"] == 0
         assert stats["acceptance_rate"] == 0.0
+        assert stats["degraded_queue_depth"] == 0
 
     @pytest.mark.asyncio
     async def test_stats_after_activity(self):
@@ -1614,6 +1618,239 @@ class TestClaimTimeoutExpiry:
         assert len(claim_expired) == 1
         assert claim_expired[0].source_agent_id == agents[1].id
         assert claim_expired[0].problem_id == prob.id
+
+
+# -- Solver Timeout -------------------------------------------------------
+
+class TestSolverTimeout:
+    """Ensure solver callback time limits cancel stalled solves safely."""
+
+    @pytest.mark.asyncio
+    async def test_solver_timeout_reopens_problem_and_raises(self):
+        async def slow_solver(desc: str, ctx: dict) -> str:
+            await asyncio.sleep(0.2)
+            return "too late"
+
+        ex = make_exchange(solver_timeout_default_seconds=0.05)
+        poster = Agent(name="Poster", solver=auto_solver)
+        slow = Agent(name="Slow", solver=slow_solver)
+        ex.register(poster)
+        ex.register(slow)
+
+        prob = Problem(title="Timeout", description="slow work", author_id=poster.id)
+        await ex.post_problem(prob)
+
+        with pytest.raises(SolverTimeoutError):
+            await ex.claim_and_solve(prob.id, slow.id)
+
+        assert prob.status == ProblemStatus.OPEN
+        assert slow.active_count == 0
+        assert all(s.problem_id != prob.id for s in ex._solutions.values())
+
+    @pytest.mark.asyncio
+    async def test_timeout_class_from_context_overrides_default(self):
+        async def slow_solver(desc: str, ctx: dict) -> str:
+            await asyncio.sleep(0.2)
+            return "too late"
+
+        ex = make_exchange(
+            solver_timeout_default_seconds=5.0,
+            solver_timeout_classes={"SHORT": 0.05},
+        )
+        poster = Agent(name="Poster", solver=auto_solver)
+        slow = Agent(name="Slow", solver=slow_solver)
+        ex.register(poster)
+        ex.register(slow)
+
+        prob = Problem(
+            title="TimeoutClass",
+            description="slow work",
+            author_id=poster.id,
+            context={"solver_timeout_class": "SHORT"},
+        )
+        await ex.post_problem(prob)
+
+        with pytest.raises(SolverTimeoutError):
+            await ex.claim_and_solve(prob.id, slow.id)
+
+    @pytest.mark.asyncio
+    async def test_solver_timeout_event_emitted(self):
+        from schwarma.events import EventKind
+
+        async def slow_solver(desc: str, ctx: dict) -> str:
+            await asyncio.sleep(0.2)
+            return "too late"
+
+        ex = make_exchange(solver_timeout_default_seconds=0.05)
+        poster = Agent(name="Poster", solver=auto_solver)
+        slow = Agent(name="Slow", solver=slow_solver)
+        ex.register(poster)
+        ex.register(slow)
+
+        prob = Problem(title="TimeoutEvent", description="slow work", author_id=poster.id)
+        await ex.post_problem(prob)
+
+        ex.bus.enable_recording()
+        with pytest.raises(SolverTimeoutError):
+            await ex.claim_and_solve(prob.id, slow.id)
+
+        events = [e for e in ex.bus.recorded_events if e.kind == EventKind.SOLVER_TIMED_OUT]
+        assert len(events) == 1
+        assert events[0].source_agent_id == slow.id
+        assert events[0].problem_id == prob.id
+
+
+class TestRetryBudget:
+    """Retry budget limits repeated failure loops on a problem."""
+
+    @pytest.mark.asyncio
+    async def test_problem_locks_after_retry_budget_exhausted(self):
+        ex = Exchange(ExchangeConfig(
+            reviews_required_for_accept=1,
+            auto_assign=False,
+            auto_review=False,
+            retry_budget_per_problem=2,
+            enable_staking=False,
+        ))
+        agents = make_agents(3)
+        for a in agents:
+            ex.register(a)
+
+        prob = Problem(title="RetryBudget", description="retry loop", author_id=agents[0].id)
+        await ex.post_problem(prob)
+
+        # First failed attempt -> re-open (still claimable).
+        await ex.claim_problem(prob.id, agents[1].id)
+        sol1 = await ex.solve_problem(prob.id, agents[1].id, solution_body="bad answer 1")
+        await ex.submit_review(Review(
+            solution_id=sol1.id,
+            reviewer_id=agents[2].id,
+            review_type=ReviewType.CORRECTNESS,
+            verdict=ReviewVerdict.REJECT,
+        ))
+        assert prob.status == ProblemStatus.OPEN
+        assert prob.context.get("_retry_failures") == 1
+
+        # Second failed attempt -> budget exhausted, problem locked.
+        await ex.claim_problem(prob.id, agents[1].id)
+        sol2 = await ex.solve_problem(prob.id, agents[1].id, solution_body="bad answer 2")
+        await ex.submit_review(Review(
+            solution_id=sol2.id,
+            reviewer_id=agents[2].id,
+            review_type=ReviewType.CORRECTNESS,
+            verdict=ReviewVerdict.REJECT,
+        ))
+        assert prob.status == ProblemStatus.REJECTED
+        assert prob.context.get("_retry_failures") == 2
+
+        with pytest.raises(ValueError, match="not open"):
+            await ex.claim_problem(prob.id, agents[1].id)
+
+    @pytest.mark.asyncio
+    async def test_solver_timeout_consumes_retry_budget(self):
+        async def slow_solver(desc: str, ctx: dict) -> str:
+            await asyncio.sleep(0.2)
+            return "too late"
+
+        ex = make_exchange(
+            retry_budget_per_problem=1,
+            solver_timeout_default_seconds=0.05,
+            enable_staking=False,
+        )
+        poster = Agent(name="Poster", solver=auto_solver)
+        slow = Agent(name="Slow", solver=slow_solver)
+        ex.register(poster)
+        ex.register(slow)
+
+        prob = Problem(title="RetryTimeout", description="slow work", author_id=poster.id)
+        await ex.post_problem(prob)
+
+        with pytest.raises(SolverTimeoutError):
+            await ex.claim_and_solve(prob.id, slow.id)
+
+        assert prob.status == ProblemStatus.REJECTED
+        assert prob.context.get("_retry_failures") == 1
+
+
+class TestCircuitBreaker:
+    @pytest.mark.asyncio
+    async def test_repeated_rejections_open_circuit_for_routing(self):
+        from datetime import datetime, timedelta, timezone
+
+        ex = Exchange(ExchangeConfig(
+            reviews_required_for_accept=1,
+            auto_assign=False,
+            auto_review=False,
+            enable_staking=False,
+            circuit_breaker_failure_threshold=2,
+            circuit_breaker_cooldown_seconds=300,
+        ))
+        agents = make_agents(3)
+        for a in agents:
+            ex.register(a)
+
+        prob1 = Problem(title="CB1", description="first", author_id=agents[0].id)
+        await ex.post_problem(prob1)
+        await ex.claim_problem(prob1.id, agents[1].id)
+        sol1 = await ex.solve_problem(prob1.id, agents[1].id, solution_body="bad1")
+        await ex.submit_review(Review(
+            solution_id=sol1.id,
+            reviewer_id=agents[2].id,
+            review_type=ReviewType.CORRECTNESS,
+            verdict=ReviewVerdict.REJECT,
+        ))
+
+        assert ex.request_work(agents[1].id) != []
+
+        prob2 = Problem(title="CB2", description="second", author_id=agents[0].id)
+        await ex.post_problem(prob2)
+        await ex.claim_problem(prob2.id, agents[1].id)
+        sol2 = await ex.solve_problem(prob2.id, agents[1].id, solution_body="bad2")
+        await ex.submit_review(Review(
+            solution_id=sol2.id,
+            reviewer_id=agents[2].id,
+            review_type=ReviewType.CORRECTNESS,
+            verdict=ReviewVerdict.REJECT,
+        ))
+
+        # Circuit now open -> no routed work.
+        assert ex.request_work(agents[1].id) == []
+
+        # Simulate cooldown expiry.
+        ex._cb_open_until[agents[1].id] = datetime.now(timezone.utc) - timedelta(seconds=1)
+        assert ex.request_work(agents[1].id) != []
+
+
+class TestGlobTimeout:
+    @pytest.mark.asyncio
+    async def test_expire_stale_globs_disbands_inactive_glob(self):
+        from datetime import datetime, timedelta, timezone
+        from schwarma.events import EventKind
+        from schwarma.glob import GlobStatus
+
+        ex = make_exchange(glob_timeout_seconds=60)
+        agents = make_agents(3)
+        for a in agents:
+            ex.register(a)
+
+        p = Problem(title="Glob target", description="team effort", author_id=agents[0].id)
+        await ex.post_problem(p)
+        glob = await ex.form_glob(coordinator_id=agents[1].id, problem_id=p.id, name="idle")
+        await ex.join_glob(glob.id, agents[2].id, subtask="part")
+
+        # Force inactivity window to exceed timeout.
+        glob.created_at = datetime.now(timezone.utc) - timedelta(seconds=120)
+        for m in glob.memberships:
+            m.joined_at = datetime.now(timezone.utc) - timedelta(seconds=120)
+
+        ex.bus.enable_recording()
+        disbanded = await ex.expire_stale_globs(now=datetime.now(timezone.utc))
+        assert len(disbanded) == 1
+        assert glob.status == GlobStatus.DISBANDED
+
+        events = [e for e in ex.bus.recorded_events if e.kind == EventKind.GLOB_DISBANDED]
+        assert len(events) == 1
+        assert events[0].problem_id == p.id
 
 
 # -- Problem Priority Queue -----------------------------------------------

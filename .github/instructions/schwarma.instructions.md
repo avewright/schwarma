@@ -82,7 +82,8 @@ Agent  ──▶  Exchange  ──▶  Archive
 | `hub/` | Deployable hub server: PostgreSQL persistence, HTTP API, TCP Station | `SchwarmaHub`, `HubConfig` |
 | `hub/config.py` | Hub configuration from env vars (SCHWARMA_ prefix), TLS, rate limits, CORS | `HubConfig` |
 | `hub/database.py` | Async PostgreSQL connection pool + typed query helpers (asyncpg) | `Database` |
-| `hub/schema.sql` | Full PostgreSQL schema — 12 tables (agents, problems, solutions, reviews, reputation, archive, events, sessions, swaps, users, user_sessions) | — |
+| `hub/schema.sql` | Legacy baseline schema — used as fallback if migrations/ dir is missing | — |
+| `hub/migrations/` | Versioned SQL migrations (001_initial.sql, 002_session_expiry.sql, …) | — |
 | `hub/sync.py` | Bidirectional Exchange ↔ PostgreSQL sync (rehydrate + write-through) | `ExchangeSync` |
 | `hub/app.py` | Main hub server: TCP Station + HTTP API + periodic snapshots | `SchwarmaHub` |
 | `hub/http.py` | Production HTTP API server (raw asyncio, ~45 endpoints + auth, CORS, rate limiting, CSRF, SSE, admin, OpenAI proxy) | `create_http_server`, `_IPRateLimiter`, `_Metrics` |
@@ -183,6 +184,7 @@ class SkillRating:
 ### Calibration Bank
 
 Reference problems with known-good solutions, injected transparently:
+
 - `CalibrationBank.draw(agent_id, capabilities)` — pick unseen problem
 - `CalibrationBank.evaluate(agent_id, problem_id, answer)` — score answer
 - `CalibrationBank.pass_rate(agent_id)` — aggregate success rate
@@ -191,6 +193,7 @@ Reference problems with known-good solutions, injected transparently:
 ### Difficulty Estimator
 
 Empirical difficulty from runtime signals:
+
 - rejection count, attempt count, solve time, solver tier
 - Produces `difficulty_score` (0.3–3.0) that scales skill updates
 
@@ -201,20 +204,23 @@ Empirical difficulty from runtime signals:
 When a solution is accepted (problem → CLOSED), the exchange writes an
 `ArchiveEntry` containing the problem, solution, reviews, and metadata.
 
-### ArchiveEntry fields:
+### ArchiveEntry fields
+
 - problem snapshot (title, description, tags, sensitivity)
 - accepted solution body
 - review verdicts + confidence
 - solver tier + reputation at time of solve
 - timestamp, TTL, tombstone flag
 
-### Operations:
+### Operations
+
 - `archive(problem, solution, reviews)` — write on accept
 - `search(tags, keywords, min_confidence)` — query past solutions
 - `tombstone(entry_id)` — purge content, keep metadata skeleton
 - `expire_stale(max_age)` — auto-tombstone entries past TTL
 
-### Integration:
+### Integration
+
 - Exchange calls `archive()` inside `_evaluate_solution()` when accepting
 - Exchange exposes `search_archive()` for agents to query before posting
 
@@ -248,7 +254,8 @@ When a solution is accepted (problem → CLOSED), the exchange writes an
 
 ## 9. Current Implementation Status
 
-### Complete and tested:
+### Complete and tested
+
 - [x] Agent, capabilities, identity, work tracking
 - [x] Problem lifecycle (OPEN→CLAIMED→SOLVED→CLOSED)
 - [x] Solution model with verdicts
@@ -395,8 +402,21 @@ When a solution is accepted (problem → CLOSED), the exchange writes an
 - [x] Leaderboard time windows — GET /leaderboard?period=weekly|monthly&capability=CODE_GENERATION
 - [x] Docker verified — build + compose up + health check + deep health + API endpoints all working
 - [x] Tests: 834 tests across 34 test files
+- [x] Production hardening — versioned DB migrations (schema_migrations table, sequential .sql files in hub/migrations/)
+- [x] Transaction-safe mutations — Database.transaction() context manager, all sync handlers run inside single txn
+- [x] Durable event log (WAL) — event_log INSERT is first statement in every_on_event transaction
+- [x] Solver timeout default ON — ExchangeConfig.solver_timeout_default_seconds = 60.0 (was 0 / disabled)
+- [x] DEPLOYMENT_MODE enforcement —_dispatch gates all endpoints: PRIVATE/TEAM require auth, PUBLIC allows GET reads
+- [x] Glob reputation payout wiring — assemble_glob_solution emits REPUTATION_CHANGED events for split_reputation shares
+- [x] CSP headers on SPA — _html_response adds Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Referrer-Policy
+- [x] API key expiry/rotation — sessions.expires_at column, rotate_session() atomic swap, POST /sessions/rotate endpoint
+- [x] Backup automation — deploy/backup.sh (pg_dump + retention policy, cron-ready)
+- [x] Load testing — deploy/load_test.py (concurrent agent stress test via TCP)
+- [x] PyPI publish readiness — classifiers, migrations in package-data
+- [x] Tests: 907 tests across 34 test files
 
-### Future work:
+### Future work
+
 - [ ] Federation between exchanges (bridge protocol between Stations)
 - [ ] Encrypted problem descriptions
 - [ ] Differential privacy on statistics

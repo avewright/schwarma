@@ -136,6 +136,31 @@ class TestAutoTriagePush:
         assert len(triage_msgs) == 0
 
     @pytest.mark.asyncio
+    async def test_circuit_open_agents_excluded(self):
+        """Agents with open circuit breaker should not receive triage pushes."""
+        cfg = _cfg(
+            circuit_breaker_failure_threshold=1,
+            circuit_breaker_cooldown_seconds=3600,
+        )
+        ex = Exchange(cfg)
+        author = Agent(name="Author", solver=_dummy)
+        solver = Agent(name="Solver", solver=_dummy)
+        ex.register(author)
+        ex.register(solver)
+
+        ex._record_agent_failure(solver.id)  # open circuit immediately
+
+        await ex.post_problem(Problem(
+            title="Test problem",
+            description="Something to solve",
+            author_id=author.id,
+        ))
+
+        msgs = ex.inbox(solver.id)
+        triage_msgs = [m for m in msgs if m["kind"] == "TRIAGE_ASSIGNED"]
+        assert len(triage_msgs) == 0
+
+    @pytest.mark.asyncio
     async def test_update_watch_tags(self):
         """update_watch_tags changes agent's triage preferences."""
         cfg = _cfg()
@@ -158,6 +183,27 @@ class TestAutoTriagePush:
         ))
         triage_msgs = [m for m in ex.inbox(agent.id) if m["kind"] == "TRIAGE_ASSIGNED"]
         assert len(triage_msgs) == 0
+
+    @pytest.mark.asyncio
+    async def test_no_solver_queues_problem_for_graceful_degradation(self):
+        """If no eligible solvers exist, problem is queued and reroute event emitted."""
+        cfg = _cfg()
+        ex = Exchange(cfg)
+        author = Agent(name="Author", solver=_dummy)
+        ex.register(author)
+
+        ex.bus.enable_recording()
+        p = await ex.post_problem(Problem(
+            title="Queue me",
+            description="No one can solve right now",
+            author_id=author.id,
+        ))
+
+        assert p.id in ex._degraded_queue
+        reroutes = [e for e in ex.bus.recorded_events if e.kind == EventKind.TRIAGE_REROUTED]
+        assert len(reroutes) == 1
+        assert reroutes[0].problem_id == p.id
+        assert reroutes[0].payload.get("queued") is True
 
 
 class TestRequestWork:
@@ -256,3 +302,47 @@ class TestRequestWork:
 
         work = ex.request_work(solver.id)
         assert len(work) == 0
+
+    @pytest.mark.asyncio
+    async def test_circuit_open_gets_no_work(self):
+        """request_work returns nothing while circuit breaker is open."""
+        cfg = _cfg(
+            auto_assign=False,
+            circuit_breaker_failure_threshold=1,
+            circuit_breaker_cooldown_seconds=3600,
+        )
+        ex = Exchange(cfg)
+        author = Agent(name="Author", solver=_dummy)
+        solver = Agent(name="Solver", solver=_dummy)
+        ex.register(author)
+        ex.register(solver)
+
+        await ex.post_problem(Problem(
+            title="Open", description="Open", author_id=author.id,
+        ))
+        ex._record_agent_failure(solver.id)  # open circuit immediately
+
+        work = ex.request_work(solver.id)
+        assert len(work) == 0
+
+    @pytest.mark.asyncio
+    async def test_request_work_drains_degraded_queue(self):
+        """When a solver requests work, queued degraded problems are drained."""
+        cfg = _cfg(auto_assign=True)
+        ex = Exchange(cfg)
+        author = Agent(name="Author", solver=_dummy)
+        ex.register(author)
+
+        p = await ex.post_problem(Problem(
+            title="Queued",
+            description="Initially no solver present",
+            author_id=author.id,
+        ))
+        assert p.id in ex._degraded_queue
+
+        solver = Agent(name="Solver", solver=_dummy)
+        ex.register(solver)
+
+        work = ex.request_work(solver.id)
+        assert any(w.id == p.id for w in work)
+        assert p.id not in ex._degraded_queue

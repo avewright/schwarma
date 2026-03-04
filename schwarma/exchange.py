@@ -46,6 +46,7 @@ from schwarma.errors import (
     NotFoundError,
     PermissionError_,
     RateLimitError,
+    SolverTimeoutError,
     StateError,
     SuspendedError,
     ValidationError,
@@ -129,6 +130,7 @@ class ExchangeConfig:
 
     reviews_required_for_accept: int = 2
     auto_assign: bool = True          # auto-triage when a problem is posted
+    enable_graceful_degradation: bool = True  # queue work when no eligible solver is available
     auto_review: bool = True          # auto-request reviews when a solution arrives
     max_active_per_agent: int = 5     # concurrency cap
     min_unique_reviewers: int = 1     # distinct reviewer agents required
@@ -188,6 +190,25 @@ class ExchangeConfig:
 
     # --- Claim timeout ---
     claim_timeout_seconds: int = 0         # 0 = no timeout; seconds before stale claims expire
+
+    # --- Solver timeout / cancellation ---
+    solver_timeout_default_seconds: float = 60.0  # seconds; 0 = disabled
+    solver_timeout_classes: dict[str, float] = field(default_factory=lambda: {
+        "SHORT": 15.0,
+        "NORMAL": 60.0,
+        "LONG": 300.0,
+    })
+    solver_timeout_penalty: int = 2
+
+    # --- Retry budget ---
+    retry_budget_per_problem: int = 0      # 0 = unlimited retries
+
+    # --- Circuit breaker (routing only) ---
+    circuit_breaker_failure_threshold: int = 0   # 0 = disabled
+    circuit_breaker_cooldown_seconds: float = 300.0
+
+    # --- Glob inactivity timeout ---
+    glob_timeout_seconds: float = 0.0  # 0 = disabled
 
     # --- Review tiebreaker ---
     tiebreaker_extra_reviews: int = 1      # extra reviews requested on a tie
@@ -264,6 +285,10 @@ class Exchange:
         # Tracks challenge stakes: solution_id → (challenger_id, stake)
         self._challenge_stakes: dict[UUID, tuple[UUID, int]] = {}
 
+        # Circuit-breaker state (temporary routing disable for failing agents)
+        self._cb_failures: dict[UUID, int] = {}
+        self._cb_open_until: dict[UUID, datetime] = {}
+
         # Suspended agents
         self._suspended: set[UUID] = set()
         self._suspension_reasons: dict[UUID, str] = {}
@@ -276,6 +301,8 @@ class Exchange:
 
         # Per-agent notification inbox
         self._inboxes: dict[UUID, list[dict[str, Any]]] = {}
+        # Problems queued during graceful degradation (no eligible solvers)
+        self._degraded_queue: list[UUID] = []
 
         # Agent presence / heartbeat tracking
         self._heartbeats: dict[UUID, datetime] = {}
@@ -435,6 +462,42 @@ class Exchange:
                 + (f": {reason}" if reason else "")
             )
 
+    def _is_circuit_open(self, agent_id: UUID, *, now: datetime | None = None) -> bool:
+        """Return ``True`` when triage routing is blocked for *agent_id*."""
+        until = self._cb_open_until.get(agent_id)
+        if until is None:
+            return False
+        if now is None:
+            now = datetime.now(timezone.utc)
+        if now >= until:
+            self._cb_open_until.pop(agent_id, None)
+            return False
+        return True
+
+    def _record_agent_failure(self, agent_id: UUID) -> None:
+        """Increment failure streak and open circuit when threshold is hit."""
+        threshold = max(0, int(self.config.circuit_breaker_failure_threshold))
+        if threshold <= 0:
+            return
+
+        failures = self._cb_failures.get(agent_id, 0) + 1
+        self._cb_failures[agent_id] = failures
+        if failures < threshold:
+            return
+
+        cooldown = max(1.0, float(self.config.circuit_breaker_cooldown_seconds))
+        self._cb_open_until[agent_id] = datetime.now(timezone.utc) + timedelta(seconds=cooldown)
+        self._cb_failures[agent_id] = 0
+        logger.warning(
+            "Circuit opened for agent %s for %.1fs after %d failures",
+            agent_id, cooldown, threshold,
+        )
+
+    def _record_agent_success(self, agent_id: UUID) -> None:
+        """Reset failure streak / open circuit after successful completion."""
+        self._cb_failures.pop(agent_id, None)
+        self._cb_open_until.pop(agent_id, None)
+
     def _enforce_rate_limit(self, agent_id: UUID, action: RateLimitAction) -> None:
         """Raise :class:`RateLimitError` if the agent has exceeded a rate limit."""
         if not self.config.enable_rate_limits:
@@ -443,6 +506,13 @@ class Exchange:
             raise RateLimitError(
                 f"Rate limit exceeded for {action.name}. Try again later."
             )
+
+    def _enqueue_degraded_problem(self, problem_id: UUID) -> None:
+        if problem_id not in self._degraded_queue:
+            self._degraded_queue.append(problem_id)
+
+    def _dequeue_degraded_problem(self, problem_id: UUID) -> None:
+        self._degraded_queue = [pid for pid in self._degraded_queue if pid != problem_id]
 
     # ==================================================================
     # Problem lifecycle
@@ -782,7 +852,20 @@ class Exchange:
         })
 
         if solution_body is None:
-            solution_body = await agent.solve(problem.description, problem.context)
+            timeout_s = self._resolve_solver_timeout(problem)
+            if timeout_s > 0:
+                try:
+                    solution_body = await asyncio.wait_for(
+                        agent.solve(problem.description, problem.context),
+                        timeout=timeout_s,
+                    )
+                except asyncio.TimeoutError as exc:
+                    await self._handle_solver_timeout(problem, agent, timeout_s)
+                    raise SolverTimeoutError(
+                        f"Solver for problem {problem.id} timed out after {timeout_s:.2f}s"
+                    ) from exc
+            else:
+                solution_body = await agent.solve(problem.description, problem.context)
 
         # --- Content guards on solution ---
         if self.config.enable_content_guards:
@@ -851,6 +934,127 @@ class Exchange:
 
         logger.info("Solution submitted by %s for %s", agent.name, problem.title)
         return solution
+
+    def _resolve_solver_timeout(self, problem: Problem) -> float:
+        """Resolve timeout seconds for a problem (0 means disabled)."""
+        explicit = problem.context.get("solver_timeout_seconds")
+        if explicit is not None:
+            try:
+                value = float(explicit)
+                return value if value > 0 else 0.0
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Invalid solver_timeout_seconds=%r on problem %s; ignoring",
+                    explicit, problem.id,
+                )
+
+        class_name = problem.context.get("solver_timeout_class")
+        if class_name:
+            key = str(class_name).upper()
+            value = self.config.solver_timeout_classes.get(key)
+            if value is not None:
+                return value if value > 0 else 0.0
+            logger.warning(
+                "Unknown solver_timeout_class=%r on problem %s; using default",
+                class_name, problem.id,
+            )
+
+        value = float(self.config.solver_timeout_default_seconds)
+        return value if value > 0 else 0.0
+
+    async def _handle_solver_timeout(
+        self,
+        problem: Problem,
+        agent: Agent,
+        timeout_s: float,
+    ) -> None:
+        """Cleanup and telemetry path for a timed-out solver callback."""
+        agent_id = agent.id
+        problem_id = problem.id
+        had_claim = agent_id in problem.claimed_by
+
+        if had_claim:
+            problem.claimed_by.remove(agent_id)
+            self._claim_times.pop((agent_id, problem_id), None)
+            self._stakes.pop((agent_id, problem_id), None)
+            agent._active_problem_ids.discard(problem_id)
+
+            if problem.status == ProblemStatus.CLAIMED and not problem.claimed_by:
+                problem.status = ProblemStatus.OPEN
+
+            penalty = max(0, int(self.config.solver_timeout_penalty))
+            if penalty > 0:
+                self.ledger.record(
+                    agent_id,
+                    ReputationEvent.PENALTY,
+                    delta=-penalty,
+                    reason=f"Solver timeout on '{problem.title}' ({timeout_s:.2f}s)",
+                    related_id=problem_id,
+                )
+
+            await self._record_retry_failure(problem)
+            self._record_agent_failure(agent_id)
+
+        await self.bus.publish(Event(
+            kind=EventKind.SOLVER_TIMED_OUT,
+            source_agent_id=agent_id,
+            problem_id=problem_id,
+            payload={
+                "timeout_seconds": timeout_s,
+                "had_claim": had_claim,
+            },
+        ))
+        logger.warning(
+            "Solver timed out: agent=%s problem=%s timeout=%.2fs",
+            agent_id, problem_id, timeout_s,
+        )
+
+    def _retry_budget_for(self, problem: Problem) -> int:
+        """Return retry budget for *problem* (0 means unlimited)."""
+        override = problem.context.get("retry_budget")
+        if override is not None:
+            try:
+                value = int(override)
+                return max(0, value)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "Invalid retry_budget=%r on problem %s; using config default",
+                    override, problem.id,
+                )
+        return max(0, int(self.config.retry_budget_per_problem))
+
+    async def _record_retry_failure(self, problem: Problem) -> bool:
+        """Record one failed attempt and lock the problem when budget is exhausted.
+
+        Returns True when the budget has just been exhausted for this problem.
+        """
+        budget = self._retry_budget_for(problem)
+        if budget <= 0:
+            return False
+
+        used = int(problem.context.get("_retry_failures", 0)) + 1
+        problem.context["_retry_failures"] = used
+
+        if used < budget:
+            return False
+
+        problem.claimed_by.clear()
+        problem.status = ProblemStatus.REJECTED
+
+        await self.bus.publish(Event(
+            kind=EventKind.PROBLEM_CLOSED,
+            problem_id=problem.id,
+            payload={
+                "reason": "retry_budget_exhausted",
+                "retry_failures": used,
+                "retry_budget": budget,
+            },
+        ))
+        logger.info(
+            "Retry budget exhausted for problem %s (%d/%d); status set to REJECTED",
+            problem.id, used, budget,
+        )
+        return True
 
     # NOTE: Not locked — delegates to locked methods internally
     async def claim_and_solve(self, problem_id: UUID, agent_id: UUID) -> Solution:
@@ -1375,6 +1579,8 @@ class Exchange:
             raise NotFoundError("agent", str(agent_id))
         if self.is_suspended(agent_id):
             return []
+        if self._is_circuit_open(agent_id):
+            return []
         if agent.active_count >= self.config.max_active_per_agent:
             return []
 
@@ -1414,7 +1620,10 @@ class Exchange:
             scored.append((p, score))
 
         scored.sort(key=lambda pair: pair[1], reverse=True)
-        return [p for p, _ in scored[:limit]]
+        selected = [p for p, _ in scored[:limit]]
+        for p in selected:
+            self._dequeue_degraded_problem(p.id)
+        return selected
 
     def statistics(self) -> dict[str, Any]:
         """Compute exchange-wide KPIs.
@@ -1455,6 +1664,8 @@ class Exchange:
         # Agent activity
         active_agents = sum(1 for a in self._agents.values() if a.active_count > 0)
         suspended_agents = len(self._suspended)
+        circuit_open_agents = sum(1 for aid in self._agents if self._is_circuit_open(aid))
+        degraded_queue_depth = len(self._degraded_queue)
 
         # Reputation stats
         balances = [self.ledger.balance(aid) for aid in self._agents]
@@ -1470,6 +1681,8 @@ class Exchange:
             "total_agents": total_agents,
             "active_agents": active_agents,
             "suspended_agents": suspended_agents,
+            "circuit_open_agents": circuit_open_agents,
+            "degraded_queue_depth": degraded_queue_depth,
             "total_problems": total_problems,
             "problem_status": status_counts,
             "total_solutions": total_solutions,
@@ -1624,11 +1837,27 @@ class Exchange:
             # Skip suspended agents
             if self.is_suspended(agent.id):
                 continue
+            # Skip agents with open circuit
+            if self._is_circuit_open(agent.id):
+                continue
             eligible.append(agent)
 
         if not eligible:
+            if self.config.enable_graceful_degradation:
+                self._enqueue_degraded_problem(problem.id)
+                await self.bus.publish(Event(
+                    kind=EventKind.TRIAGE_REROUTED,
+                    problem_id=problem.id,
+                    payload={
+                        "reason": "no_solvers_available",
+                        "queued": True,
+                        "queue_depth": len(self._degraded_queue),
+                    },
+                ))
             logger.debug("No eligible agents for triage on %s", problem.title)
             return
+
+        self._dequeue_degraded_problem(problem.id)
 
         # Prefer online agents: sort online first, then let triage rank
         online_set = set(self.online_agents())
@@ -1736,6 +1965,9 @@ class Exchange:
         A review with confidence 0.5 counts as half a vote.
         A minimum number of *unique* reviewers is also enforced.
         """
+        if solution.verdict in (SolutionVerdict.ACCEPTED, SolutionVerdict.REJECTED):
+            return
+
         reviews = self.reviews_for_solution(solution.id)
         if len(reviews) < self.config.reviews_required_for_accept:
             return  # not enough data yet
@@ -1803,6 +2035,7 @@ class Exchange:
             self.trust_gate.maybe_promote(
                 solution.author_id, self.ledger.balance(solution.author_id)
             )
+            self._record_agent_success(solution.author_id)
 
             await self.bus.publish(Event(
                 kind=EventKind.SOLUTION_ACCEPTED,
@@ -1847,6 +2080,8 @@ class Exchange:
                 self.difficulty.record_rejection(problem.id)
 
             problem.reject_and_reopen()
+            await self._record_retry_failure(problem)
+            self._record_agent_failure(solution.author_id)
             await self.bus.publish(Event(
                 kind=EventKind.SOLUTION_REJECTED,
                 source_agent_id=solution.author_id,
@@ -1928,6 +2163,7 @@ class Exchange:
                         related_id=solution.id,
                         reason=f"Tiebreaker accept for '{problem.title}'",
                     )
+                    self._record_agent_success(solution.author_id)
                     await self.bus.publish(Event(
                         kind=EventKind.SOLUTION_ACCEPTED,
                         source_agent_id=solution.author_id,
@@ -1958,6 +2194,8 @@ class Exchange:
                         related_id=solution.id,
                     )
                     problem.reject_and_reopen()
+                    await self._record_retry_failure(problem)
+                    self._record_agent_failure(solution.author_id)
                     await self.bus.publish(Event(
                         kind=EventKind.SOLUTION_REJECTED,
                         source_agent_id=solution.author_id,
@@ -2240,6 +2478,20 @@ class Exchange:
                     delta=share.delta,
                     reason=share.reason,
                 )
+                # Emit REPUTATION_CHANGED so the sync layer persists the payout
+                await self.bus.publish(Event(
+                    kind=EventKind.REPUTATION_CHANGED,
+                    source_agent_id=coordinator_id,
+                    target_agent_id=share.agent_id,
+                    problem_id=glob.problem_id,
+                    solution_id=solution.id,
+                    payload={
+                        "event": ReputationEvent.BONUS.name,
+                        "delta": share.delta,
+                        "reason": share.reason,
+                        "glob_id": str(glob.id),
+                    },
+                ))
 
         glob.dissolve()
 
@@ -2547,6 +2799,56 @@ class Exchange:
 
         return released
 
+    @_locked
+    async def expire_stale_globs(
+        self,
+        *,
+        now: datetime | None = None,
+        idle_seconds: float | None = None,
+    ) -> list[Glob]:
+        """Disband globs that have been inactive for too long."""
+        timeout = (
+            float(self.config.glob_timeout_seconds)
+            if idle_seconds is None
+            else float(idle_seconds)
+        )
+        if timeout <= 0:
+            return []
+
+        if now is None:
+            now = datetime.now(timezone.utc)
+
+        disbanded: list[Glob] = []
+        for glob in self._globs.values():
+            if glob.status in (GlobStatus.DISSOLVED, GlobStatus.DISBANDED):
+                continue
+
+            last_activity = glob.created_at
+            for m in glob.memberships:
+                if m.joined_at > last_activity:
+                    last_activity = m.joined_at
+                if m.submitted_at and m.submitted_at > last_activity:
+                    last_activity = m.submitted_at
+
+            idle_for = (now - last_activity).total_seconds()
+            if idle_for < timeout:
+                continue
+
+            glob.disband()
+            disbanded.append(glob)
+            await self.bus.publish(Event(
+                kind=EventKind.GLOB_DISBANDED,
+                source_agent_id=glob.coordinator_id,
+                problem_id=glob.problem_id,
+                payload={"glob_id": str(glob.id), "idle_seconds": idle_for},
+            ))
+            logger.info(
+                "Glob %s disbanded after %.1fs idle (timeout=%.1fs)",
+                glob.id, idle_for, timeout,
+            )
+
+        return disbanded
+
     # ==================================================================
     # Bounty escalation
     # ==================================================================
@@ -2658,6 +2960,13 @@ class Exchange:
             "archive_entries": [
                 e.to_dict() for e in self.archive._entries.values()
             ],
+            "globs": {
+                str(gid): g.to_dict() for gid, g in self._globs.items()
+            },
+            "glob_solutions": {
+                str(sid): gs.to_dict() for sid, gs in self._glob_solutions.items()
+            },
+            "degraded_queue": [str(pid) for pid in self._degraded_queue],
         }
 
     def restore_problems(self, snapshot: dict[str, Any]) -> int:
