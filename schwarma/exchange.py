@@ -28,6 +28,15 @@ from uuid import UUID, uuid5, NAMESPACE_DNS
 _ORACLE_REVIEWER_ID = uuid5(NAMESPACE_DNS, "schwarma.oracle")
 
 from schwarma.agent import Agent, AgentCapability, ModelTier
+from schwarma.glob import (
+    ContributionStatus,
+    Glob,
+    GlobMembership,
+    GlobSolution,
+    GlobStatus,
+    ReputationShare,
+    split_reputation,
+)
 from schwarma.archive import Archive, ArchiveConfig, ArchiveEntry, ReviewSnapshot
 from schwarma.behavior import BehaviorAnalyzer, BehaviorConfig
 from schwarma.errors import (
@@ -61,6 +70,29 @@ from enum import Enum, auto as _auto
 logger = logging.getLogger(__name__)
 
 
+class DeploymentMode(Enum):
+    """Controls privacy posture and access policy for the exchange instance.
+
+    PRIVATE — single-team, full privacy enforced. Agents must be explicitly
+              registered. Sensitivity defaults to INTERNAL. Good for
+              internal CI/CD quality gates, internal code review, etc.
+
+    TEAM    — semi-open instance shared by a known group. Agents can
+              self-register but are reviewed. Sensitivity defaults to
+              INTERNAL but PUBLIC problems are visible to all registered
+              agents. Good for cross-team or partner deployments.
+
+    PUBLIC  — community exchange. Anyone can register. Problems default to
+              PUBLIC sensitivity. This is the community platform mode —
+              think Stack Exchange for agents. Open challenges, Kaggle
+              imports, and globs are all fully enabled here.
+    """
+
+    PRIVATE = _auto()
+    TEAM = _auto()
+    PUBLIC = _auto()
+
+
 class ProblemSortKey(Enum):
     """Sort keys for priority-ordered problem retrieval."""
 
@@ -90,6 +122,10 @@ class HookPoint(Enum):
 @dataclass
 class ExchangeConfig:
     """Top-level knobs."""
+
+    # Deployment posture — controls defaults for privacy, registration,
+    # open-challenge ingestion, and glob formation.
+    deployment_mode: DeploymentMode = DeploymentMode.PRIVATE
 
     reviews_required_for_accept: int = 2
     auto_assign: bool = True          # auto-triage when a problem is posted
@@ -211,6 +247,10 @@ class Exchange:
         self.behavior = BehaviorAnalyzer(self.config.behavior_config)
         self.archive = Archive(self.config.archive_config)
         self.rate_limiter = RateLimiter(self.config.rate_limit_config)
+
+        # Glob coalition stores
+        self._globs: dict[UUID, Glob] = {}
+        self._glob_solutions: dict[UUID, GlobSolution] = {}
 
         # Tracks reputation staked per (agent_id, problem_id)
         self._stakes: dict[tuple[UUID, UUID], int] = {}
@@ -2000,6 +2040,237 @@ class Exchange:
         if "REJECT" in upper:
             return ReviewVerdict.REJECT
         return ReviewVerdict.ABSTAIN
+
+    # ==================================================================
+    # Glob — multi-agent collaborative solving
+    # ==================================================================
+
+    @_locked
+    async def form_glob(
+        self,
+        coordinator_id: UUID,
+        problem_id: UUID,
+        *,
+        name: str = "",
+        max_members: int = 5,
+        coordinator_subtask: str = "orchestration",
+        coordinator_bonus: float = 0.10,
+    ) -> Glob:
+        """Create a new glob for collaborative solving.
+
+        The coordinator immediately joins as the first member.  The problem
+        is not claimed yet — :meth:`join_glob` collects additional members;
+        once the coordinator calls :meth:`assemble_glob_solution` the
+        underlying ``claim_problem`` + ``solve_problem`` are invoked on
+        behalf of the glob.
+        """
+        if coordinator_id not in self._agents:
+            raise NotFoundError(f"Agent {coordinator_id} not registered")
+        if problem_id not in self._problems:
+            raise NotFoundError(f"Problem {problem_id} not found")
+        self._require_not_suspended(coordinator_id)
+
+        glob = Glob(
+            problem_id=problem_id,
+            coordinator_id=coordinator_id,
+            name=name or f"glob-{str(problem_id)[:8]}",
+            max_members=max_members,
+            coordinator_bonus=coordinator_bonus,
+        )
+        glob.add_member(
+            coordinator_id,
+            subtask=coordinator_subtask,
+            weight=1.0,
+        )
+        self._globs[glob.id] = glob
+
+        await self.bus.publish(Event(
+            kind=EventKind.PROBLEM_CLAIMED,
+            source_agent_id=coordinator_id,
+            problem_id=problem_id,
+            payload={"glob_id": str(glob.id), "event": "glob_formed"},
+        ))
+        logger.info("Glob %s formed by %s for problem %s", glob.id, coordinator_id, problem_id)
+        return glob
+
+    @_locked
+    async def join_glob(
+        self,
+        glob_id: UUID,
+        agent_id: UUID,
+        *,
+        subtask: str = "",
+        weight: float = 1.0,
+    ) -> GlobMembership:
+        """Join an existing glob as a contributing member."""
+        if glob_id not in self._globs:
+            raise NotFoundError(f"Glob {glob_id} not found")
+        if agent_id not in self._agents:
+            raise NotFoundError(f"Agent {agent_id} not registered")
+        self._require_not_suspended(agent_id)
+
+        glob = self._globs[glob_id]
+        if glob.status not in (GlobStatus.FORMING, GlobStatus.ACTIVE):
+            raise StateError(f"Glob {glob_id} is not accepting members (status={glob.status.name})")
+
+        membership = glob.add_member(agent_id, subtask=subtask, weight=weight)
+        logger.info("Agent %s joined glob %s", agent_id, glob_id)
+        return membership
+
+    @_locked
+    async def submit_to_glob(
+        self,
+        glob_id: UUID,
+        agent_id: UUID,
+        contribution_text: str,
+    ) -> GlobMembership:
+        """Submit a member's contribution to the glob coordinator."""
+        if glob_id not in self._globs:
+            raise NotFoundError(f"Glob {glob_id} not found")
+        glob = self._globs[glob_id]
+        membership = glob.get_membership(agent_id)
+        if membership is None:
+            raise PermissionError_(f"Agent {agent_id} is not in glob {glob_id}")
+        if glob.status != GlobStatus.ACTIVE:
+            raise StateError(f"Glob {glob_id} is not ACTIVE")
+
+        membership.submit(contribution_text)
+        logger.info("Agent %s submitted contribution to glob %s", agent_id, glob_id)
+        return membership
+
+    @_locked
+    async def accept_glob_contribution(
+        self,
+        glob_id: UUID,
+        coordinator_id: UUID,
+        member_agent_id: UUID,
+    ) -> GlobMembership:
+        """Coordinator marks a member's contribution as accepted."""
+        if glob_id not in self._globs:
+            raise NotFoundError(f"Glob {glob_id} not found")
+        glob = self._globs[glob_id]
+        if glob.coordinator_id != coordinator_id:
+            raise PermissionError_("Only the coordinator can accept contributions")
+        membership = glob.get_membership(member_agent_id)
+        if membership is None:
+            raise NotFoundError(f"Agent {member_agent_id} not in glob {glob_id}")
+        membership.accept()
+        return membership
+
+    @_locked
+    async def assemble_glob_solution(
+        self,
+        glob_id: UUID,
+        coordinator_id: UUID,
+        assembly_notes: str,
+    ) -> Solution:
+        """Assemble accepted contributions into a final solution.
+
+        The coordinator must be the one to call this.  The Exchange:
+        1. Claims the problem on behalf of the coordinator.
+        2. Builds a combined solution body from accepted contributions.
+        3. Submits via solve_problem (guards, reputation, auto-review).
+        4. Records a GlobSolution for provenance tracking.
+        5. Distributes reputation shares via split_reputation.
+        """
+        if glob_id not in self._globs:
+            raise NotFoundError(f"Glob {glob_id} not found")
+        glob = self._globs[glob_id]
+        if glob.coordinator_id != coordinator_id:
+            raise PermissionError_("Only the coordinator can assemble the solution")
+        if glob.status != GlobStatus.ACTIVE:
+            raise StateError(f"Glob {glob_id} must be ACTIVE to assemble solution")
+
+        # Build combined body
+        accepted_memberships = [
+            m for m in glob.memberships
+            if m.contribution_status == ContributionStatus.ACCEPTED
+        ]
+        parts: list[str] = []
+        member_contribs: dict[str, str] = {}
+        for m in accepted_memberships:
+            part = f"### [{m.role.name}] Agent {m.agent_id}\n{m.contribution_text or ''}"
+            parts.append(part)
+            member_contribs[str(m.agent_id)] = m.contribution_text or ""
+
+        combined = (
+            f"## Glob Solution — {glob.name}\n\n"
+            f"{assembly_notes}\n\n"
+            + "\n\n".join(parts)
+        )
+
+        glob.status = GlobStatus.SUBMITTING
+
+        # Claim + solve on coordinator's behalf (locks re-entrant — use internal helpers)
+        problem = self._problems[glob.problem_id]
+        if problem.is_open:
+            problem.claim(coordinator_id)
+            problem.glob_id = glob.id
+
+        solution = Solution(
+            problem_id=glob.problem_id,
+            author_id=coordinator_id,
+            body=combined,
+        )
+        self._solutions[solution.id] = solution
+        problem.add_solution(solution.id)
+        agent = self._agents[coordinator_id]
+        agent.release(glob.problem_id)
+
+        # Track the GlobSolution
+        gs = GlobSolution(
+            glob_id=glob.id,
+            problem_id=glob.problem_id,
+            solution_id=solution.id,
+            assembled_by=coordinator_id,
+            assembly_notes=assembly_notes,
+            member_contributions=member_contribs,
+        )
+        self._glob_solutions[solution.id] = gs
+
+        # Distribute reputation shares immediately (full bounty before review;
+        # a future enhancement could defer until acceptance).
+        bounty = problem.bounty
+        shares = split_reputation(glob, bounty)
+        for share in shares:
+            if share.delta > 0 and share.agent_id in self._agents:
+                self.ledger.record(
+                    share.agent_id,
+                    ReputationEvent.BONUS,
+                    delta=share.delta,
+                    reason=share.reason,
+                )
+
+        glob.dissolve()
+
+        await self.bus.publish(Event(
+            kind=EventKind.SOLUTION_SUBMITTED,
+            source_agent_id=coordinator_id,
+            problem_id=glob.problem_id,
+            solution_id=solution.id,
+            payload={"glob_id": str(glob.id), "shares": [str(s.agent_id) for s in shares]},
+        ))
+        logger.info("Glob %s assembled solution %s", glob_id, solution.id)
+        return solution
+
+    def get_glob(self, glob_id: UUID) -> Glob:
+        """Return a glob by ID."""
+        if glob_id not in self._globs:
+            raise NotFoundError(f"Glob {glob_id} not found")
+        return self._globs[glob_id]
+
+    def list_globs(
+        self,
+        problem_id: UUID | None = None,
+        status: GlobStatus | None = None,
+    ) -> list[Glob]:
+        """List globs, optionally filtered by problem or status."""
+        globs = list(self._globs.values())
+        if problem_id is not None:
+            globs = [g for g in globs if g.problem_id == problem_id]
+        if status is not None:
+            globs = [g for g in globs if g.status == status]
+        return globs
 
     # ==================================================================
     # Skill / tier helpers

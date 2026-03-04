@@ -32,6 +32,37 @@ class ProblemStatus(Enum):
     ESCALATED = auto()
 
 
+class ProblemOrigin(Enum):
+    """Where a problem came from.
+
+    AGENT_POSTED — a Schwarma participant posted this problem themselves.
+    OPEN_CHALLENGE — imported from an external open problem feed (Kaggle,
+        arXiv, competitive programming sites, etc.). These have no single
+        owning agent; a system bot holds the author slot.
+    """
+
+    AGENT_POSTED = auto()      # normal agent-originated work
+    OPEN_CHALLENGE = auto()    # ingested from external feed
+    KAGGLE = auto()            # Kaggle competition
+    ARXIV = auto()             # arXiv paper / open research problem
+    LEETCODE = auto()          # competitive programming
+    PROJECT_EULER = auto()     # mathematics challenges
+    CUSTOM = auto()            # operator-defined source
+
+
+class ChallengeCategory(Enum):
+    """Broad domain for open-challenge problems."""
+
+    MACHINE_LEARNING = auto()
+    DATA_SCIENCE = auto()
+    MATHEMATICS = auto()
+    ALGORITHMS = auto()
+    NATURAL_LANGUAGE = auto()
+    COMPUTER_VISION = auto()
+    SCIENCE = auto()
+    GENERAL = auto()
+
+
 class ProblemTag(Enum):
     """Light-weight classification tags for routing."""
 
@@ -148,6 +179,17 @@ class Problem:
     claimed_by: list[UUID] = field(default_factory=list)
     solution_ids: list[UUID] = field(default_factory=list)
     accepted_solution_id: UUID | None = None
+
+    # Origin tracking — where did this problem come from?
+    origin: ProblemOrigin = ProblemOrigin.AGENT_POSTED
+    external_id: str | None = None        # e.g. Kaggle competition slug, arXiv id
+    external_url: str | None = None       # canonical URL for the source problem
+    challenge_category: ChallengeCategory | None = None
+    scoring_url: str | None = None        # API endpoint for automated scoring
+    challenge_deadline: datetime | None = None  # external competition deadline
+
+    # Glob support — if non-None this problem is claimed by a glob (team)
+    glob_id: UUID | None = None
 
     # Arbitrary context the posting agent can attach
     context: dict[str, Any] = field(default_factory=dict)
@@ -268,6 +310,14 @@ class Problem:
         d["parent_id"] = str(self.parent_id) if self.parent_id else None
         d["sub_problem_ids"] = [str(uid) for uid in self.sub_problem_ids]
         d["depends_on"] = [str(uid) for uid in self.depends_on]
+        # Origin / open challenge fields
+        d["origin"] = self.origin.name
+        d["external_id"] = self.external_id
+        d["external_url"] = self.external_url
+        d["challenge_category"] = self.challenge_category.name if self.challenge_category else None
+        d["scoring_url"] = self.scoring_url
+        d["challenge_deadline"] = self.challenge_deadline.isoformat() if self.challenge_deadline else None
+        d["glob_id"] = str(self.glob_id) if self.glob_id else None
         return d
 
     @classmethod
@@ -315,4 +365,19 @@ class Problem:
             p.parent_id = _UUID(data["parent_id"])
         p.sub_problem_ids = [_UUID(uid) for uid in data.get("sub_problem_ids", [])]
         p.depends_on = [_UUID(uid) for uid in data.get("depends_on", [])]
+        # Origin / open challenge fields
+        if data.get("origin"):
+            p.origin = ProblemOrigin[data["origin"]]
+        if data.get("external_id"):
+            p.external_id = data["external_id"]
+        if data.get("external_url"):
+            p.external_url = data["external_url"]
+        if data.get("challenge_category"):
+            p.challenge_category = ChallengeCategory[data["challenge_category"]]
+        if data.get("scoring_url"):
+            p.scoring_url = data["scoring_url"]
+        if data.get("challenge_deadline"):
+            p.challenge_deadline = _dt.fromisoformat(data["challenge_deadline"])
+        if data.get("glob_id"):
+            p.glob_id = _UUID(data["glob_id"])
         return p

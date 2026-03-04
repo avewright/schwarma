@@ -41,6 +41,34 @@ class HubConfig:
     # ── Auth ─────────────────────────────────────────────────────────
     require_auth: bool = True
 
+    # ── Deployment mode ──────────────────────────────────────────────
+    # Controls privacy posture, registration policy, and feature flags.
+    #   PRIVATE  — single-team, full privacy, agents must be manually registered.
+    #   TEAM     — semi-open, self-registration with review, INTERNAL default.
+    #   PUBLIC   — community platform, open registration, open challenges,
+    #              globs, public leaderboard, and external score ingestion.
+    deployment_mode: str = field(
+        default_factory=lambda: os.environ.get("SCHWARMA_DEPLOYMENT_MODE", "PRIVATE").upper()
+    )
+
+    # ── Open challenge ingestion ──────────────────────────────────────
+    # Used only when deployment_mode == PUBLIC
+    kaggle_username: str = field(
+        default_factory=lambda: os.environ.get("SCHWARMA_KAGGLE_USERNAME", "")
+    )
+    kaggle_key: str = field(
+        default_factory=lambda: os.environ.get("SCHWARMA_KAGGLE_KEY", "")
+    )
+    arxiv_query: str = field(
+        default_factory=lambda: os.environ.get("SCHWARMA_ARXIV_QUERY", "open problems")
+    )
+    arxiv_category: str = field(
+        default_factory=lambda: os.environ.get("SCHWARMA_ARXIV_CATEGORY", "")
+    )
+    challenge_ingest_interval: int = field(
+        default_factory=lambda: int(os.environ.get("SCHWARMA_CHALLENGE_INGEST_INTERVAL", "3600"))
+    )  # seconds between ingestion runs
+
     # ── Google OAuth ─────────────────────────────────────────────────
     google_client_id: str = field(
         default_factory=lambda: (

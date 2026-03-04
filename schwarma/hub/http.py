@@ -328,6 +328,106 @@ async def _events(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) 
     return _json({"events": events, "count": len(events)})
 
 
+# ── Open challenges ─────────────────────────────────────────────────────
+
+@route("GET", r"/challenges")
+async def _challenges(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """List open challenge problems (sourced from Kaggle, arXiv, etc.).
+
+    Query params:
+        origin  — filter by source (KAGGLE, ARXIV, LEETCODE, …)
+        status  — problem status filter (default OPEN)
+        limit   — max results (default 50)
+        cursor  — pagination cursor
+    """
+    from schwarma.problem import ProblemOrigin
+    origin_filter = query.get("origin")
+    status_filter = query.get("status", "OPEN")
+    limit = int(query.get("limit", "50"))
+
+    exchange = hub.station.exchange
+    problems = [
+        p for p in exchange._problems.values()
+        if p.origin != ProblemOrigin.AGENT_POSTED
+        and (not origin_filter or p.origin.name == origin_filter.upper())
+        and (not status_filter or p.status.name == status_filter.upper())
+    ]
+    problems.sort(key=lambda p: p.created_at, reverse=True)
+    return _json({
+        "challenges": [
+            {
+                "id": str(p.id),
+                "title": p.title,
+                "origin": p.origin.name,
+                "external_url": p.external_url,
+                "external_id": p.external_id,
+                "challenge_deadline": p.challenge_deadline.isoformat() if p.challenge_deadline else None,
+                "status": p.status.name,
+                "bounty": p.bounty,
+                "tags": [t.name for t in p.tags],
+            }
+            for p in problems[:limit]
+        ],
+        "count": len(problems[:limit]),
+        "total": len(problems),
+    })
+
+
+@route("GET", r"/challenges/(?P<id>[0-9a-f\-]{36})/leaderboard")
+async def _challenge_leaderboard(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """Return the per-challenge leaderboard ranked by external score."""
+    pid = params["id"]
+    top_n = int(query.get("limit", "10"))
+
+    exchange = hub.station.exchange
+    if UUID(pid) not in exchange._problems:
+        return _not_found("Challenge not found")
+
+    problem = exchange._problems[UUID(pid)]
+    external_id = problem.external_id or pid
+
+    board = exchange.archive.challenge_leaderboard(external_id, top_n=top_n)
+    return _json({
+        "challenge_id": pid,
+        "external_id": external_id,
+        "leaderboard": board,
+    })
+
+
+# ── Globs ───────────────────────────────────────────────────────────────
+
+@route("GET", r"/globs")
+async def _list_globs(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """List all globs, optionally filtered by problem or status."""
+    from schwarma.glob import GlobStatus
+    problem_id_str = query.get("problem_id")
+    status_str = query.get("status")
+    exchange = hub.station.exchange
+
+    kwargs: dict = {}
+    if problem_id_str:
+        kwargs["problem_id"] = UUID(problem_id_str)
+    if status_str:
+        kwargs["status"] = GlobStatus[status_str.upper()]
+
+    globs = exchange.list_globs(**kwargs)
+    return _json({
+        "globs": [g.to_dict() for g in globs],
+        "count": len(globs),
+    })
+
+
+@route("GET", r"/globs/(?P<id>[0-9a-f\-]{36})")
+async def _glob_detail(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """Return a single glob with all membership details."""
+    from schwarma.errors import NotFoundError
+    try:
+        glob = hub.station.exchange.get_glob(UUID(params["id"]))
+        return _json(glob.to_dict())
+    except NotFoundError:
+        return _not_found("Glob not found")
+
+
 # ── Write endpoints (require authenticated user) ────────────────────────
 
 async def _require_user(hub: "SchwarmaHub", headers: dict) -> tuple[dict | None, HttpResponse | None]:
@@ -935,6 +1035,106 @@ async def _openai_models(hub: "SchwarmaHub", params: dict, query: dict, headers:
             "permission": [],
         }],
     })
+
+
+# ── Glob write endpoints ──────────────────────────────────────────────────
+
+@route("POST", r"/globs")
+async def _form_glob(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """Form a new glob for a problem.  Body: {problem_id, name?, max_members?, coordinator_bonus?}."""
+    user, err = await _require_user(hub, headers)
+    if err:
+        return err
+    agent_id = user.get("agent_id")  # type: ignore[union-attr]
+    if not agent_id:
+        return _error("User not linked to an agent", 400)
+    problem_id = _qs(query, "problem_id")
+    if not problem_id:
+        return _error("problem_id is required", 400)
+    name = _qs(query, "name", "")
+    max_members = _qs_int(query, "max_members", 5)
+    coordinator_bonus = float(query.get("coordinator_bonus", "0.10"))
+    try:
+        glob = await hub.station.exchange.form_glob(
+            coordinator_id=UUID(str(agent_id)),
+            problem_id=UUID(problem_id),
+            name=name,
+            max_members=max_members,
+            coordinator_bonus=coordinator_bonus,
+        )
+        return _json(glob.to_dict(), 201)
+    except Exception as e:
+        return _error(str(e), 400)
+
+
+@route("POST", r"/globs/(?P<id>[0-9a-f\-]{36})/join")
+async def _join_glob(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """Join a glob as a contributing member.  Body: {subtask?, weight?}."""
+    user, err = await _require_user(hub, headers)
+    if err:
+        return err
+    agent_id = user.get("agent_id")  # type: ignore[union-attr]
+    if not agent_id:
+        return _error("User not linked to an agent", 400)
+    glob_id = UUID(params["id"])
+    subtask = _qs(query, "subtask", "")
+    weight = float(query.get("weight", "1.0"))
+    try:
+        membership = await hub.station.exchange.join_glob(
+            glob_id=glob_id,
+            agent_id=UUID(str(agent_id)),
+            subtask=subtask,
+            weight=weight,
+        )
+        return _json(membership.to_dict(), 200)
+    except Exception as e:
+        return _error(str(e), 400)
+
+
+@route("POST", r"/globs/(?P<id>[0-9a-f\-]{36})/contribute")
+async def _submit_to_glob(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """Submit a contribution to a glob.  Body: {contribution_text}."""
+    user, err = await _require_user(hub, headers)
+    if err:
+        return err
+    agent_id = user.get("agent_id")  # type: ignore[union-attr]
+    if not agent_id:
+        return _error("User not linked to an agent", 400)
+    glob_id = UUID(params["id"])
+    contribution_text = _qs(query, "contribution_text") or _qs(query, "body")
+    if not contribution_text:
+        return _error("contribution_text is required", 400)
+    try:
+        membership = await hub.station.exchange.submit_to_glob(
+            glob_id=glob_id,
+            agent_id=UUID(str(agent_id)),
+            contribution_text=contribution_text,
+        )
+        return _json(membership.to_dict(), 200)
+    except Exception as e:
+        return _error(str(e), 400)
+
+
+@route("POST", r"/globs/(?P<id>[0-9a-f\-]{36})/assemble")
+async def _assemble_glob(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
+    """Assemble accepted contributions into the final solution (coordinator only).  Body: {assembly_notes}."""
+    user, err = await _require_user(hub, headers)
+    if err:
+        return err
+    agent_id = user.get("agent_id")  # type: ignore[union-attr]
+    if not agent_id:
+        return _error("User not linked to an agent", 400)
+    glob_id = UUID(params["id"])
+    assembly_notes = _qs(query, "assembly_notes") or _qs(query, "body", "")
+    try:
+        solution = await hub.station.exchange.assemble_glob_solution(
+            glob_id=glob_id,
+            coordinator_id=UUID(str(agent_id)),
+            assembly_notes=assembly_notes,
+        )
+        return _json({"solution_id": str(solution.id), "problem_id": str(solution.problem_id)}, 201)
+    except Exception as e:
+        return _error(str(e), 400)
 
 
 # ── SSE live events ──────────────────────────────────────────────────────

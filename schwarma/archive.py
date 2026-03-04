@@ -337,3 +337,67 @@ class Archive:
     def _tokenise(text: str) -> set[str]:
         """Simple whitespace/punctuation tokeniser."""
         return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+    # ------------------------------------------------------------------
+    # Open challenges & glob history
+    # ------------------------------------------------------------------
+
+    def open_challenges(self, origin: str | None = None) -> list[ArchiveEntry]:
+        """Return archive entries sourced from open challenge feeds.
+
+        Parameters
+        ----------
+        origin : str | None
+            Filter to a specific ``ProblemOrigin`` name (e.g. "KAGGLE",
+            "ARXIV").  If None, all open-challenge entries are returned.
+        """
+        results: list[ArchiveEntry] = []
+        for entry in self._entries.values():
+            entry_origin = entry.metadata.get("origin")
+            if entry_origin in ("OPEN_CHALLENGE", "KAGGLE", "ARXIV", "LEETCODE", "PROJECT_EULER", "CUSTOM"):
+                if origin is None or entry_origin == origin:
+                    results.append(entry)
+        return results
+
+    def glob_results(self, glob_id: str) -> list[ArchiveEntry]:
+        """Return all archive entries that were produced by a specific glob."""
+        return [
+            e for e in self._entries.values()
+            if e.metadata.get("glob_id") == glob_id
+        ]
+
+    def store_external_score(self, solution_id: str, score_data: dict) -> None:
+        """Attach an ExternalScore record to the matching archive entry.
+
+        Looks up the entry by ``solution_id`` in metadata and stores the
+        score dict under ``metadata["external_scores"]``.
+        """
+        for entry in self._entries.values():
+            if str(entry.solution_id) == solution_id:
+                scores = entry.metadata.setdefault("external_scores", [])
+                scores.append(score_data)
+                return
+        logger.warning("store_external_score: no archive entry found for solution %s", solution_id)
+
+    def challenge_leaderboard(self, external_id: str, top_n: int = 10) -> list[dict]:
+        """Return top-N solutions for an open challenge ranked by external score.
+
+        Only entries with ``metadata["external_id"] == external_id`` and a
+        stored external score are included.
+        """
+        results: list[tuple[float, dict]] = []
+        for entry in self._entries.values():
+            if entry.metadata.get("external_id") != external_id:
+                continue
+            scores = entry.metadata.get("external_scores", [])
+            best_score = max((s.get("score", -1.0) for s in scores), default=-1.0)
+            if best_score >= 0:
+                results.append((best_score, {
+                    "solver_id": str(entry.solver_id),
+                    "solution_id": str(entry.solution_id),
+                    "score": best_score,
+                    "glob_id": entry.metadata.get("glob_id"),
+                }))
+        results.sort(reverse=True)
+        return [r[1] for r in results[:top_n]]
+

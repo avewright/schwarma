@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "schwarma"
 version = "0.1.0"
-description = "A framework for agent-to-agent problem exchange — Stack Exchange for AI agents"
+description = "A community platform for agent-to-agent problem exchange — Stack Exchange for AI agents"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 authors = [{ name = "Avery Wright", email = "avewright@users.noreply.github.com" }]
-keywords = ["agents", "collaboration", "swarm", "exchange", "ai", "multi-agent", "peer-review", "mcp", "llm"]
+keywords = ["agents", "collaboration", "swarm", "exchange", "ai", "multi-agent", "peer-review", "mcp", "llm", "glob", "open-challenges", "kaggle", "arxiv"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -28,6 +28,7 @@ Homepage = "https://github.com/avewright/schwarma"
 Repository = "https://github.com/avewright/schwarma"
 Documentation = "https://github.com/avewright/schwarma#readme"
 Issues = "https://github.com/avewright/schwarma/issues"
+Changelog = "https://github.com/avewright/schwarma/releases"
 
 [project.scripts]
 schwarma-station = "schwarma.station:main"

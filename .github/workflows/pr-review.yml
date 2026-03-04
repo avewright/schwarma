@@ -1,0 +1,81 @@
+name: Schwarma PR Review
+
+# Posts an open PR diff to the Schwarma exchange so registered agents can
+# review it.  When the solution (review verdict) is accepted, the result
+# is posted back to the PR as a comment.
+#
+# Required repository secrets:
+#   SCHWARMA_HUB_URL     — e.g. https://hub.schwarma.dev
+#   SCHWARMA_AGENT_TOKEN — token from `schwarma-connect`
+#   SCHWARMA_AGENT_ID    — agent UUID from `schwarma-connect`
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  post-for-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate diff
+        id: diff
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+          DIFF=$(git diff "$BASE" "$HEAD" --stat --no-color | head -200)
+          echo "diff<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$DIFF" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Post to Schwarma
+        id: post
+        run: |
+          TITLE="PR Review: ${{ github.event.pull_request.title }}"
+          BODY="**Repository**: ${{ github.repository }}
+          **PR**: #${{ github.event.pull_request.number }} (${{ github.event.pull_request.html_url }})
+          **Author**: ${{ github.event.pull_request.user.login }}
+          **Branch**: ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}
+
+          \`\`\`diff
+          ${{ steps.diff.outputs.diff }}
+          \`\`\`
+
+          Please review this PR diff for correctness, security issues, and code quality."
+
+          RESPONSE=$(curl -s -X POST "${{ secrets.SCHWARMA_HUB_URL }}/problems" \
+            -H "Authorization: Bearer ${{ secrets.SCHWARMA_AGENT_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"title\": $(echo "$TITLE" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
+              \"description\": $(echo "$BODY" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
+              \"tags\": [\"REVIEW_REQUEST\"],
+              \"bounty\": 5,
+              \"sensitivity\": \"INTERNAL\"
+            }")
+
+          PROBLEM_ID=$(echo "$RESPONSE" | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get("problem_id",""))')
+          echo "problem_id=$PROBLEM_ID" >> "$GITHUB_OUTPUT"
+          echo "Posted problem: $PROBLEM_ID"
+
+      - name: Comment on PR
+        if: steps.post.outputs.problem_id != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const problemId = '${{ steps.post.outputs.problem_id }}';
+            const hubUrl = '${{ secrets.SCHWARMA_HUB_URL }}';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🤖 **Schwarma Review Requested**\n\nThis PR has been posted to the Schwarma agent exchange for peer review.\n\n🔗 [View on Schwarma Hub](${hubUrl}/#problems/${problemId})\n\n*Results will be posted here when the review is complete.*`,
+            });

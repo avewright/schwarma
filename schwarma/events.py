@@ -124,11 +124,92 @@ EventHandler = Callable[[Event], Coroutine[Any, Any, None]]
 EventFilter = Callable[[Event], bool]
 
 
+# ---------------------------------------------------------------------------
+# Webhook support
+# ---------------------------------------------------------------------------
+
+@dataclass
+class WebhookTarget:
+    """Configuration for a single outbound webhook endpoint.
+
+    Attributes
+    ----------
+    url : str
+        The HTTP endpoint to POST events to.
+    secret : str | None
+        Optional HMAC-SHA256 signing secret.  When set, a
+        ``X-Schwarma-Signature-256`` header is added to every request.
+    kinds : set[EventKind] | None
+        If provided, only these event kinds are dispatched to this target.
+        None means all events.
+    max_retries : int
+        Number of delivery retries on transient failure.
+    timeout_seconds : int
+        HTTP request timeout.
+    id : str
+        Unique identifier for this target.
+    """
+
+    url: str
+    secret: str | None = None
+    kinds: set[EventKind] | None = None
+    max_retries: int = 3
+    timeout_seconds: int = 10
+    id: str = field(default_factory=lambda: str(__import__('uuid').uuid4()))
+
+
+async def _deliver_webhook(target: WebhookTarget, payload: bytes) -> bool:
+    """Attempt to deliver *payload* to *target.url*.
+
+    Returns True on success, False on permanent failure.
+    Retries transient failures up to ``target.max_retries`` times.
+    """
+    import urllib.error
+    import urllib.request
+    import hmac
+    import hashlib
+
+    headers: dict[str, str] = {
+        "Content-Type": "application/json",
+        "User-Agent": "Schwarma-Webhook/1.0",
+    }
+    if target.secret:
+        sig = hmac.new(target.secret.encode(), payload, hashlib.sha256).hexdigest()
+        headers["X-Schwarma-Signature-256"] = f"sha256={sig}"
+
+    for attempt in range(target.max_retries + 1):
+        try:
+            req = urllib.request.Request(
+                target.url,
+                data=payload,
+                headers=headers,
+                method="POST",
+            )
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: urllib.request.urlopen(req, timeout=target.timeout_seconds),
+            )
+            return True
+        except Exception as exc:
+            if attempt < target.max_retries:
+                await asyncio.sleep(2 ** attempt)  # exponential backoff
+            else:
+                logger.warning("Webhook delivery to %s failed after %d retries: %s", target.url, target.max_retries, exc)
+    return False
+
+
 class EventBus:
     """Publish/subscribe event bus.
 
     Handlers are async callables.  Publishing is fire-and-forget by default
     but ``publish_and_wait`` lets callers block until all handlers finish.
+
+    Webhook support
+    ---------------
+    Call :meth:`add_webhook` to register outbound HTTP endpoints that
+    receive POST requests for matching events.  Delivery is async and
+    non-blocking; failed webhooks are retried with exponential backoff.
     """
 
     def __init__(self) -> None:
@@ -137,6 +218,28 @@ class EventBus:
         self._filtered_handlers: list[tuple[EventFilter, EventHandler]] = []
         self._recording: bool = False
         self._recorded: list[Event] = []
+        self._webhooks: dict[str, WebhookTarget] = {}  # id → target
+
+    # ------------------------------------------------------------------
+    # Webhook management
+    # ------------------------------------------------------------------
+
+    def add_webhook(self, target: WebhookTarget) -> str:
+        """Register a webhook target.  Returns the target ID."""
+        self._webhooks[target.id] = target
+        logger.info("Webhook registered: %s → %s", target.id, target.url)
+        return target.id
+
+    def remove_webhook(self, target_id: str) -> bool:
+        """Remove a webhook target by ID.  Returns True if found."""
+        if target_id in self._webhooks:
+            del self._webhooks[target_id]
+            return True
+        return False
+
+    def list_webhooks(self) -> list[WebhookTarget]:
+        """Return all registered webhook targets."""
+        return list(self._webhooks.values())
 
     # ------------------------------------------------------------------
     # Subscription
@@ -227,6 +330,7 @@ class EventBus:
 
     async def publish(self, event: Event) -> None:
         """Publish *event* to all matching handlers (fire-and-forget)."""
+        import json as _json
         if self._recording:
             self._recorded.append(event)
         handlers = list(self._global_handlers) + list(
@@ -245,6 +349,13 @@ class EventBus:
                 await handler(event)
             except Exception:
                 logger.exception("Handler %s failed for %s", handler, event)
+
+        # Fire webhooks (non-blocking tasks)
+        if self._webhooks:
+            payload = _json.dumps(event.to_dict()).encode()
+            for target in list(self._webhooks.values()):
+                if target.kinds is None or event.kind in target.kinds:
+                    asyncio.create_task(_deliver_webhook(target, payload))
 
     async def publish_and_wait(self, event: Event) -> list[Any]:
         """Publish and gather results from all handlers."""
