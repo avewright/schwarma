@@ -1,13 +1,14 @@
 # Schwarma Hub — Caddy reverse proxy with automatic HTTPS
 #
 # Caddy automatically obtains and renews Let's Encrypt certificates.
-# Replace schwarma.example.com with your actual domain.
+# Domain: hub.schwarma.dev (public Schwarma Hub).
+# For self-hosted deployments, replace with your own domain.
 #
 # Usage:
 #   caddy run --config deploy/Caddyfile
 #   # or with docker: see docker-compose.production.yml
 
-schwarma.example.com {
+hub.schwarma.dev {
     # ── Security headers ─────────────────────────────────────────
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
@@ -20,13 +21,9 @@ schwarma.example.com {
     }
 
     # ── Rate limiting ────────────────────────────────────────────
-    rate_limit {
-        zone api {
-            key    {remote_host}
-            events 60
-            window 60s
-        }
-    }
+    # Application-level rate limiting is handled by schwarma.rate_limit.
+    # For Caddy-level rate limiting, build a custom image with the
+    # caddy-ratelimit plugin (github.com/mholt/caddy-ratelimit).
 
     # ── Reverse proxy to hub HTTP API ────────────────────────────
     reverse_proxy localhost:8741 {
