@@ -2567,6 +2567,9 @@ class TestDevCodeLeak(unittest.IsolatedAsyncioTestCase):
         hub.db.set_local_credential = AsyncMock()
         hub.db.create_email_verification_code = AsyncMock()
         hub.db.user_count = AsyncMock(return_value=5)
+        hub.db.mark_email_verified = AsyncMock()
+        hub.db.create_user_session = AsyncMock()
+        hub.config.tls_enabled = False
 
         status, ct, body, extra = await _dispatch(
             hub, "POST", "/auth/signup",
@@ -2577,7 +2580,8 @@ class TestDevCodeLeak(unittest.IsolatedAsyncioTestCase):
         data = json.loads(body)
         assert "dev_code" not in data, "Verification code MUST NOT appear in response"
         assert data["signed_up"] is True
-        assert data["verification_required"] is True
+        # When SMTP is not configured, auto-verify instead of requiring email
+        assert data.get("authenticated") is True
 
 
 # ── Tests for auth brute-force rate limiting ─────────────────────────────
@@ -2619,6 +2623,9 @@ class TestFirstAdminAutoPromote(unittest.IsolatedAsyncioTestCase):
         # First user — count is 1 after creation
         hub.db.user_count = AsyncMock(return_value=1)
         hub.db.promote_to_admin = AsyncMock()
+        hub.db.mark_email_verified = AsyncMock()
+        hub.db.create_user_session = AsyncMock()
+        hub.config.tls_enabled = False
 
         status, ct, body, extra = await _dispatch(
             hub, "POST", "/auth/signup",
@@ -2647,6 +2654,9 @@ class TestFirstAdminAutoPromote(unittest.IsolatedAsyncioTestCase):
         # Second user — count > 1
         hub.db.user_count = AsyncMock(return_value=2)
         hub.db.promote_to_admin = AsyncMock()
+        hub.db.mark_email_verified = AsyncMock()
+        hub.db.create_user_session = AsyncMock()
+        hub.config.tls_enabled = False
 
         status, ct, body, extra = await _dispatch(
             hub, "POST", "/auth/signup",

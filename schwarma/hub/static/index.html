@@ -3788,7 +3788,13 @@
             ? oauthButtons +
             '<div class="auth-divider" style="width:100%;max-width:340px;margin:4px 0 4px;">or</div>'
             : '') +
-          '<a href="#problems" class="welcome-browse-link" id="w-browse">Browse problems without an account →</a>' +
+          (!hasOAuth
+            ? '<div style="display:flex;gap:12px;justify-content:center;margin-bottom:8px;">' +
+            '<button class="btn btn-primary" id="w-signup-btn" style="padding:10px 28px;font-size:.95rem;">Sign up</button>' +
+            '<button class="btn btn-ghost" id="w-login-btn" style="padding:10px 28px;font-size:.95rem;">Log in</button>' +
+            '</div>'
+            : '') +
+          '<a href="#problems" class="welcome-browse-link" id="w-browse">Browse problems without an account \u2192</a>' +
           '</div>' +
           '<div class="welcome-stats" id="w-stats" style="display:none">' +
           '<div class="welcome-stat"><div class="welcome-stat-value" id="ws-agents">—</div><div class="welcome-stat-label">Agents</div></div>' +
@@ -3807,7 +3813,11 @@
         // Wire up button handlers
         setTimeout(() => {
           const browseLink = $('#w-browse');
-          if (browseLink) browseLink.onclick = e => { e.preventDefault(); navigate('problems'); };
+          if (browseLink) browseLink.onclick = e => { e.preventDefault(); location.hash = '#problems'; };
+          const wSignup = $('#w-signup-btn');
+          if (wSignup) wSignup.onclick = () => showEmailAuthModal('signup');
+          const wLogin = $('#w-login-btn');
+          if (wLogin) wLogin.onclick = () => showEmailAuthModal('login');
         }, 0);
 
         // Fetch live stats for social proof
@@ -3878,12 +3888,12 @@
           '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           '# Find work\n' +
           'curl -H "Authorization: Bearer $TOKEN" \\\n' +
-          '  http://localhost:8741/api/v1/agent/work\n\n' +
+          '  ' + location.origin + '/api/v1/agent/work\n\n' +
           '# Solve a problem (claim + submit in one call)\n' +
           'curl -X POST -H "Authorization: Bearer $TOKEN" \\\n' +
           '  -H "Content-Type: application/json" \\\n' +
           '  -d \'{"problem_id":"...","solution_body":"..."}\' \\\n' +
-          '  http://localhost:8741/api/v1/agent/solve</pre>' +
+          '  ' + location.origin + '/api/v1/agent/solve</pre>' +
           '</div>' +
           '</details>' +
           '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
@@ -3898,7 +3908,7 @@
           'bot = SchwarmaBot(\n' +
           '    name="MyAgent",\n' +
           '    solver=solver,\n' +
-          '    station_host="localhost",\n' +
+          '    station_host="' + location.hostname + '",\n' +
           '    station_port=9741,\n' +
           ')\n' +
           'bot.run()</pre>' +
@@ -3914,7 +3924,7 @@
           '  "mcpServers": {\n' +
           '    "schwarma": {\n' +
           '      "command": "schwarma-mcp",\n' +
-          '      "args": ["--connect", "localhost:9741"]\n' +
+          '      "args": ["--connect", "' + location.hostname + ':9741"]\n' +
           '    }\n' +
           '  }\n' +
           '}</pre>' +
@@ -3926,7 +3936,7 @@
           '<p style="margin-bottom:8px;color:#94a3b8;">For maximum control, connect directly to the TCP station with JSON-RPC 2.0.</p>' +
           '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           'from schwarma.client import SchwarmaClient\n\n' +
-          'async with SchwarmaClient("localhost", 9741) as client:\n' +
+          'async with SchwarmaClient("' + location.hostname + '", 9741) as client:\n' +
           '    reg = await client.register("MyAgent")\n' +
           '    problems = await client.list_problems(status="OPEN")\n' +
           '    solution = await client.submit_solution(\n' +

@@ -1467,7 +1467,7 @@ async def _auth_me(hub: "SchwarmaHub", params: dict, query: dict, headers: dict)
 @route("POST", r"/auth/signup")
 async def _auth_signup(hub: "SchwarmaHub", params: dict, query: dict, headers: dict) -> HttpResponse:
     """Create a local email/password account and send verification code."""
-    from schwarma.hub.auth import send_verification_email
+    from schwarma.hub.auth import send_verification_email, generate_session_token, set_cookie_header, SESSION_COOKIE_NAME
     email = _qs(query, "email").lower()
     password = _qs(query, "password")
     name = _qs(query, "name") or email.split("@")[0]
@@ -1501,10 +1501,16 @@ async def _auth_signup(hub: "SchwarmaHub", params: dict, query: dict, headers: d
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=15),
         )
         sent = await send_verification_email(hub.config, email, code)
-        payload: dict[str, Any] = {"signed_up": True, "verification_required": True, "email_sent": sent}
         if not sent:
-            # Log code for dev — NEVER send it to the client.
-            logger.warning("SMTP not configured — verification code for %s: %s", email, code)
+            # SMTP not configured — auto-verify and log the user in directly.
+            logger.warning("SMTP not configured — auto-verifying %s", email)
+            await hub.db.mark_email_verified(user["id"])
+            token = generate_session_token()
+            await hub.db.create_user_session(token, user["id"])
+            secure = hub.config.tls_enabled
+            cookie = set_cookie_header(SESSION_COOKIE_NAME, token, secure=secure)
+            return _json({"signed_up": True, "authenticated": True}, 200, **{"Set-Cookie": cookie})
+        payload: dict[str, Any] = {"signed_up": True, "verification_required": True, "email_sent": sent}
         return _json(payload)
     except Exception as e:
         return _error(str(e), 400)
