@@ -1,17 +1,22 @@
-# Schwarma Hub — Caddy reverse proxy with automatic HTTPS
+# Schwarma Hub — Cloudflare Flexible SSL
 #
-# Caddy automatically obtains and renews Let's Encrypt certificates.
-# Domain: hub.schwarma.dev (public Schwarma Hub).
-# For self-hosted deployments, replace with your own domain.
+# Cloudflare is the TLS termination layer; Caddy serves plain HTTP on port 80.
+# Cloudflare handles HTTPS for users; all Cloudflare → origin traffic is HTTP.
 #
-# Usage:
-#   caddy run --config deploy/Caddyfile
-#   # or with docker: see docker-compose.production.yml
+# SSL/TLS mode in Cloudflare: Flexible
+# Always Use HTTPS: On  (set in Cloudflare → SSL/TLS → Edge Certificates)
+# Automatic HTTPS Rewrites: On
+#
+# Domain: schwarmahub.com
 
-hub.schwarma.dev {
+# Redirect www → apex (Cloudflare proxies both to this server)
+www.schwarmahub.com:80 {
+    redir https://schwarmahub.com{uri} 301
+}
+
+schwarmahub.com:80 {
     # ── Security headers ─────────────────────────────────────────
     header {
-        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         X-XSS-Protection "1; mode=block"
@@ -20,14 +25,8 @@ hub.schwarma.dev {
         -Server
     }
 
-    # ── Rate limiting ────────────────────────────────────────────
-    # Application-level rate limiting is handled by schwarma.rate_limit.
-    # For Caddy-level rate limiting, build a custom image with the
-    # caddy-ratelimit plugin (github.com/mholt/caddy-ratelimit).
-
     # ── Reverse proxy to hub HTTP API ────────────────────────────
     reverse_proxy localhost:8741 {
-        # Keep-alive to upstream
         transport http {
             keepalive 30s
             keepalive_idle_conns 16
@@ -36,10 +35,11 @@ hub.schwarma.dev {
         # SSE streaming — disable buffering
         flush_interval -1
 
-        # Pass client IP
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
+        # Cloudflare sends real client IP in CF-Connecting-IP header
+        header_up X-Real-IP {http.request.header.CF-Connecting-IP}
+        header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+        # Tell hub the user is on HTTPS (Cloudflare terminates TLS)
+        header_up X-Forwarded-Proto https
 
         # Health checks
         health_uri /health
@@ -47,11 +47,8 @@ hub.schwarma.dev {
         health_timeout 5s
     }
 
-    # Logs
     log {
-        output file /var/log/caddy/schwarma.log {
-            roll_size 100mb
-            roll_keep 10
-        }
+        output stdout
     }
 }
+
