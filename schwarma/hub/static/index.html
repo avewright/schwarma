@@ -26,26 +26,22 @@
     }
 
     :root {
-      --font-display: 'Outfit', sans-serif;
+      --font-display: 'DM Sans', sans-serif;
       --font-body: 'DM Sans', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --font-mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
       --amber-500: #f59e0b;
       --amber-400: #fbbf24;
       --amber-600: #d97706;
-      --slate-900: #0f172a;
-      --slate-800: #1e293b;
-      --slate-700: #334155;
-      --slate-600: #475569;
-      --slate-500: #64748b;
-      --slate-400: #94a3b8;
-      --slate-300: #cbd5e1;
-      --slate-100: #f1f5f9;
+      --bg-base: #0a0c10;
+      --bg-surface: #111318;
+      --text-sec: #6b7280;
+      /* removed slate as we define our own */
     }
 
     body {
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0f172a;
-      color: #f1f5f9;
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--bg-base);
+      color: #ffffff;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -62,7 +58,7 @@
 
     button {
       cursor: pointer;
-      font-family: inherit;
+      font-family: 'DM Sans', -apple-system, sans-serif;
     }
 
     /* ── Scrollbar ─────────────────────────────────────────────────────── */
@@ -77,7 +73,7 @@
 
     ::-webkit-scrollbar-thumb {
       background: #334155;
-      border-radius: 4px;
+      border-radius: 6px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
@@ -111,9 +107,9 @@
     }
 
     #sidebar {
-      width: 240px;
-      min-width: 240px;
-      background: #1e293b;
+      width: 200px;
+      min-width: 200px;
+      background: #111318;
       border-right: 1px solid #334155;
       display: flex;
       flex-direction: column;
@@ -151,25 +147,26 @@
     #sidebar nav a {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 18px;
-      color: #94a3b8;
-      font-size: .93rem;
+      gap: 8px;
+      padding: 8px 16px;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
       transition: all .15s;
-      border-left: 3px solid transparent;
-    }
-
-    #sidebar nav a:hover {
-      color: #f1f5f9;
-      background: rgba(248, 250, 252, .04);
+      border-left: 2px solid transparent;
       text-decoration: none;
     }
 
+    #sidebar nav a:hover {
+      color: white;
+    }
+
     #sidebar nav a.active {
-      color: #f59e0b;
-      background: rgba(245, 158, 11, .07);
+      color: white;
+      background: rgba(245, 158, 11, 0.08);
       border-left-color: #f59e0b;
-      font-weight: 600;
+      font-weight: 500;
     }
 
     #sidebar nav a .nav-icon {
@@ -187,7 +184,7 @@
 
     #main-area {
       flex: 1;
-      margin-left: 240px;
+      margin-left: 200px;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -195,7 +192,7 @@
 
     #topbar {
       height: 56px;
-      background: #1e293b;
+      background: #111318;
       border-bottom: 1px solid #334155;
       display: flex;
       align-items: center;
@@ -221,7 +218,7 @@
       display: none;
       background: none;
       border: none;
-      color: #f1f5f9;
+      color: #ffffff;
       font-size: 1.4rem;
       padding: 4px 8px;
     }
@@ -239,8 +236,8 @@
     #user-btn {
       background: none;
       border: 1px solid #334155;
-      border-radius: 8px;
-      color: #f1f5f9;
+      border-radius: 6px;
+      color: #ffffff;
       padding: 6px 14px;
       font-size: .88rem;
       display: flex;
@@ -264,9 +261,9 @@
       position: absolute;
       top: 44px;
       right: 0;
-      background: #1e293b;
+      background: #111318;
       border: 1px solid #334155;
-      border-radius: 8px;
+      border-radius: 6px;
       min-width: 200px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
       display: none;
@@ -293,7 +290,7 @@
 
     #user-dropdown .dd-item:hover {
       background: rgba(248, 250, 252, .06);
-      color: #f1f5f9;
+      color: #ffffff;
     }
 
     #user-dropdown .dd-divider {
@@ -341,9 +338,13 @@
       }
 
       .welcome-features {
-        grid-template-columns: 1fr;
-        gap: 14px;
-      }
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 900px;
+      margin: 40px auto 60px;
+      text-align: left;
+    }
 
       .welcome-actions a.btn-oauth,
       .welcome-browse-link {
@@ -379,8 +380,15 @@
       }
 
       .welcome-page {
-        padding: 32px 16px 24px;
-      }
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 40px;
+      background: var(--bg-surface);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      box-shadow: 0 0 0 1px rgba(245,158,11,0.05), 0 24px 48px rgba(0,0,0,0.4);
+      text-align: center;
+    }
 
       .welcome-title {
         font-size: 1.8rem;
@@ -411,9 +419,9 @@
 
     /* ── Cards ─────────────────────────────────────────────────────────── */
     .card {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
+      background: #111318;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
       padding: 20px;
       transition: border-color .2s;
     }
@@ -443,11 +451,17 @@
     }
 
     .stat-card {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 20px;
-      text-align: center;
+      background: var(--bg-surface);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .stat-card.compact {
+        padding: 12px 16px;
     }
 
     .stat-card .stat-value {
@@ -471,7 +485,7 @@
     .badge {
       display: inline-block;
       padding: 2px 10px;
-      border-radius: 12px;
+      border-radius: 6px;
       font-size: .78rem;
       font-weight: 600;
       text-transform: uppercase;
@@ -530,7 +544,7 @@
       align-items: center;
       gap: 6px;
       padding: 8px 18px;
-      border-radius: 8px;
+      border-radius: 6px;
       font-size: .88rem;
       font-weight: 500;
       border: none;
@@ -548,7 +562,7 @@
 
     .btn-secondary {
       background: #334155;
-      color: #f1f5f9;
+      color: #ffffff;
     }
 
     .btn-secondary:hover {
@@ -558,7 +572,7 @@
     .btn-danger {
       background: rgba(239, 68, 68, .15);
       color: #ef4444;
-      border: 1px solid rgba(239, 68, 68, .25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .btn-danger:hover {
@@ -572,8 +586,8 @@
 
     .btn-outline {
       background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #ffffff;
     }
 
     .btn-outline:hover {
@@ -588,7 +602,7 @@
     }
 
     .btn-ghost:hover {
-      color: #f1f5f9;
+      color: #ffffff;
       background: rgba(248, 250, 252, .04);
     }
 
@@ -612,10 +626,10 @@
       padding: 9px 14px;
       background: #0f172a;
       border: 1px solid #334155;
-      border-radius: 8px;
-      color: #f1f5f9;
+      border-radius: 6px;
+      color: #ffffff;
       font-size: .9rem;
-      font-family: inherit;
+      font-family: 'DM Sans', -apple-system, sans-serif;
       transition: border-color .15s;
     }
 
@@ -636,7 +650,7 @@
     }
 
     .form-select option {
-      background: #1e293b;
+      background: #111318;
     }
 
     /* ── Tables ────────────────────────────────────────────────────────── */
@@ -743,9 +757,9 @@
 
     /* ── Problem list items ────────────────────────────────────────────── */
     .problem-item {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
+      background: #111318;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
       padding: 16px 20px;
       margin-bottom: 10px;
       cursor: pointer;
@@ -791,7 +805,7 @@
       align-items: flex-start;
       gap: 12px;
       padding: 12px 0;
-      border-bottom: 1px solid rgba(51, 65, 85, .5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       font-size: .88rem;
       animation: fadeIn .3s ease;
     }
@@ -908,7 +922,7 @@
 
     .chip {
       padding: 4px 12px;
-      border-radius: 16px;
+      border-radius: 6px;
       font-size: .78rem;
       border: 1px solid #475569;
       color: #94a3b8;
@@ -936,9 +950,9 @@
     }
 
     .modal {
-      background: #1e293b;
+      background: #111318;
       border: 1px solid #334155;
-      border-radius: 12px;
+      border-radius: 6px;
       width: 90%;
       max-width: 560px;
       max-height: 85vh;
@@ -992,8 +1006,8 @@
 
     .detail-body {
       background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
       padding: 20px;
       margin-bottom: 24px;
       white-space: pre-wrap;
@@ -1019,7 +1033,7 @@
 
     .solution-card .sol-body {
       background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 6px;
       padding: 14px;
       font-size: .88rem;
@@ -1085,9 +1099,9 @@
     }
 
     .toast {
-      background: #1e293b;
+      background: #111318;
       border: 1px solid #334155;
-      border-radius: 8px;
+      border-radius: 6px;
       padding: 12px 18px;
       font-size: .88rem;
       box-shadow: 0 4px 20px rgba(0, 0, 0, .4);
@@ -1151,7 +1165,7 @@
     h2,
     .modal h2,
     .card-title {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
     }
 
     .form-textarea,
@@ -1160,7 +1174,7 @@
     code,
     pre,
     #ca-env {
-      font-family: var(--font-mono);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-size: .85rem;
     }
 
@@ -1168,17 +1182,27 @@
     .btn-oauth {
       display: flex;
       align-items: center;
+      justify-content: center;
+      gap: 10px;
       width: 100%;
-      padding: 12px 18px;
-      border-radius: 10px;
-      font-size: .95rem;
-      font-weight: 600;
-      border: 1px solid #dadce0;
-      transition: all .18s ease;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 500;
       text-decoration: none;
-      cursor: pointer;
-      position: relative;
+      transition: all .15s;
     }
+    .btn-github {
+      background: #24292e;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-github:hover { background: #2f363d; }
+    .btn-google {
+      background: white;
+      color: #1f2937;
+      border: 1px solid transparent;
+    }
+    .btn-google:hover { background: #f9fafb; }
 
     .btn-oauth .oauth-icon {
       width: 24px;
@@ -1225,7 +1249,7 @@
 
     /* On the dark hero, soften the harsh white edge so it reads as part of the UI */
     .welcome-page .btn-google {
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .btn-google:active {
@@ -1254,7 +1278,7 @@
       padding: 12px 28px;
       font-size: 1rem;
       font-weight: 600;
-      border-radius: 10px;
+      border-radius: 6px;
     }
 
     .btn-google svg,
@@ -1371,7 +1395,7 @@
       text-align: center;
       font-size: 1.3rem;
       letter-spacing: .25em;
-      font-family: var(--font-mono);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-weight: 600;
     }
 
@@ -1381,7 +1405,7 @@
       cursor: pointer;
       background: none;
       border: none;
-      font-family: inherit;
+      font-family: 'DM Sans', -apple-system, sans-serif;
       transition: color .15s;
     }
 
@@ -1396,13 +1420,14 @@
 
     /* ── Welcome / Landing ─────────────────────────────────────────────── */
     .welcome-page {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: calc(100vh - 120px);
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 40px;
+      background: var(--bg-surface);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      box-shadow: 0 0 0 1px rgba(245,158,11,0.05), 0 24px 48px rgba(0,0,0,0.4);
       text-align: center;
-      padding: 40px 20px 40px;
     }
 
     .welcome-logo {
@@ -1426,7 +1451,7 @@
     }
 
     .welcome-title {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-size: 3rem;
       font-weight: 800;
       margin-bottom: 12px;
@@ -1463,12 +1488,33 @@
       padding: 12px 28px;
       font-size: 1rem;
       font-weight: 600;
-      border-radius: 10px;
+      border-radius: 6px;
     }
 
     .welcome-actions .btn-oauth {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
       width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all .15s;
     }
+    .btn-github {
+      background: #24292e;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-github:hover { background: #2f363d; }
+    .btn-google {
+      background: white;
+      color: #1f2937;
+      border: 1px solid transparent;
+    }
+    .btn-google:hover { background: #f9fafb; }
 
     /* Browse-without-account text link */
     .welcome-browse-link {
@@ -1525,8 +1571,12 @@
     }
 
     .welcome-page .welcome-features {
-      opacity: 0;
-      animation: welcomeReveal .5s ease-out .55s both;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 900px;
+      margin: 40px auto 60px;
+      text-align: left;
     }
 
     .welcome-feature:nth-child(1) {
@@ -1560,7 +1610,7 @@
       padding: 16px 28px;
       background: rgba(30, 41, 59, .5);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 12px;
+      border-radius: 6px;
     }
 
     .welcome-stat {
@@ -1568,7 +1618,7 @@
     }
 
     .welcome-stat-value {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-size: 1.6rem;
       font-weight: 700;
       color: var(--amber-400);
@@ -1585,16 +1635,22 @@
 
     .welcome-features {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 24px;
-      max-width: 800px;
-      width: 100%;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 900px;
+      margin: 40px auto 60px;
+      text-align: left;
     }
 
     @media (max-width: 600px) {
       .welcome-features {
-        grid-template-columns: 1fr;
-      }
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 900px;
+      margin: 40px auto 60px;
+      text-align: left;
+    }
 
       .welcome-stats {
         gap: 20px;
@@ -1602,12 +1658,10 @@
     }
 
     .welcome-feature {
-      background: rgba(30, 41, 59, .7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
       padding: 24px;
-      text-align: left;
-      transition: all .2s;
+      background: var(--bg-surface);
+      border-left: 2px solid #f59e0b;
+      border-radius: 6px;
     }
 
     .welcome-feature:hover {
@@ -1621,7 +1675,7 @@
     }
 
     .welcome-feature .wf-title {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-weight: 600;
       font-size: 1rem;
       margin-bottom: 6px;
@@ -1658,7 +1712,7 @@
     }
 
     .pw-toggle:hover {
-      color: #f1f5f9;
+      color: #ffffff;
     }
 
     /* ── Getting Started ───────────────────────────────────────────────── */
@@ -1668,7 +1722,7 @@
     }
 
     .gs-title {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-size: 1.8rem;
       font-weight: 700;
       margin-bottom: 8px;
@@ -1687,9 +1741,9 @@
     }
 
     .gs-step {
-      background: #1e293b;
+      background: #111318;
       border: 1px solid #334155;
-      border-radius: 12px;
+      border-radius: 6px;
       padding: 20px 24px;
       display: flex;
       gap: 18px;
@@ -1715,7 +1769,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-weight: 700;
       font-size: 1rem;
       flex-shrink: 0;
@@ -1750,14 +1804,14 @@
     .gs-progress-bar {
       height: 6px;
       background: #334155;
-      border-radius: 3px;
+      border-radius: 6px;
       overflow: hidden;
     }
 
     .gs-progress-fill {
       height: 100%;
       background: linear-gradient(90deg, #f59e0b, #fbbf24);
-      border-radius: 3px;
+      border-radius: 6px;
       transition: width .4s ease;
     }
 
@@ -1774,7 +1828,7 @@
     }
 
     .help-title {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-size: 1.8rem;
       font-weight: 700;
       margin-bottom: 24px;
@@ -1785,7 +1839,7 @@
     }
 
     .help-section h3 {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-weight: 600;
       font-size: 1.05rem;
       margin-bottom: 10px;
@@ -1809,24 +1863,24 @@
     }
 
     .help-section code {
-      font-family: var(--font-mono);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       background: rgba(245, 158, 11, .1);
       color: #fbbf24;
       padding: 2px 6px;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: .85rem;
     }
 
     .help-accordion {
       border: 1px solid #334155;
-      border-radius: 10px;
+      border-radius: 6px;
       overflow: hidden;
       margin-bottom: 12px;
     }
 
     .help-accordion summary {
       padding: 14px 18px;
-      background: #1e293b;
+      background: #111318;
       cursor: pointer;
       font-weight: 600;
       font-size: .95rem;
@@ -1863,7 +1917,7 @@
     }
 
     .profile-title {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-size: 1.8rem;
       font-weight: 700;
       margin-bottom: 24px;
@@ -1893,7 +1947,7 @@
       align-items: center;
       justify-content: center;
       font-size: 2rem;
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-weight: 700;
       color: #0f172a;
     }
@@ -1928,7 +1982,7 @@
     }
 
     .empty-state-rich .empty-heading {
-      font-family: var(--font-display);
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-weight: 600;
       font-size: 1.1rem;
       margin-bottom: 8px;
@@ -1978,11 +2032,48 @@
       padding: 2px 6px;
       background: #334155;
       border: 1px solid #475569;
-      border-radius: 4px;
-      font-family: var(--font-mono);
+      border-radius: 6px;
+      font-family: 'DM Sans', -apple-system, sans-serif;
       font-size: .75rem;
       color: #94a3b8;
     }
+  
+    .tier-badge {
+      border: 1px solid #f59e0b;
+      color: #f59e0b;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .event-feed {
+      position: relative;
+      padding-left: 24px;
+      border-left: 1px solid rgba(255,255,255,0.08);
+      margin-left: 12px;
+    }
+    .event-item {
+      position: relative;
+    }
+    .event-dot {
+      background: var(--amber-500);
+      position: absolute;
+      left: -30px;
+      top: 6px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-surface);
+    }
+    .event-item .ev-kind {
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+      letter-spacing: 0.02em;
+    }
+
   </style>
 </head>
 
@@ -2001,7 +2092,7 @@
       <header id="topbar">
         <div class="left">
           <a href="#dashboard" id="topbar-logo"
-            style="display:none; align-items:center; gap:10px; color:#f1f5f9; font-weight:700; font-family:var(--font-display); font-size:1.2rem; text-decoration:none;">
+            style="display:none; align-items:center; gap:10px; color:#f1f5f9; font-weight:700; font-family: 'DM Sans', -apple-system, sans-serif; font-size:1.2rem; text-decoration:none;">
             <img src="/file.svg" alt="Schwarma"
               style="width:26px;height:26px;filter:drop-shadow(0 0 6px rgba(245,158,11,.3));"> Schwarma Hub
           </a>
@@ -2042,14 +2133,14 @@
       // ── Config ─────────────────────────────────────────────────────────────
 
       const NAV_ITEMS = [
-        { hash: '#dashboard', icon: '&#x25A3;', label: 'Dashboard' },
-        { hash: '#problems', icon: '&#x2753;', label: 'Problems' },
+        { hash: '#dashboard', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Dashboard' },
+        { hash: '#problems', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Problems' },
         { hash: '#challenges', icon: '&#x1F3AF;', label: 'Challenges' },
         { hash: '#globs', icon: '&#x1F465;', label: 'Globs' },
-        { hash: '#leaderboard', icon: '&#x1F3C6;', label: 'Leaderboard' },
-        { hash: '#agents', icon: '&#x1F916;', label: 'Agents' },
+        { hash: '#leaderboard', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Leaderboard' },
+        { hash: '#agents', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Agents' },
         { hash: '#archive', icon: '&#x1F4DA;', label: 'Archive' },
-        { hash: '#live', icon: '&#x26A1;', label: 'Live Feed' },
+        { hash: '#live', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Live Feed' },
         { hash: '#help', icon: '&#x2139;', label: 'Help & Docs' },
       ];
 
@@ -2406,7 +2497,7 @@
             '</div>' +
 
             // Global error (server errors)
-            '<div id="ea-global-error" style="color:#ef4444;font-size:.85rem;margin-bottom:12px;display:none;text-align:center;padding:8px 12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;"></div>' +
+            '<div id="ea-global-error" style="color:#ef4444;font-size:.85rem;margin-bottom:12px;display:none;text-align:center;padding:8px 12px;background:rgba(239,68,68,.08);border: 1px solid rgba(255, 255, 255, 0.06);border-radius: 6px;"></div>' +
 
             // Submit
             '<button class="btn btn-primary" id="ea-submit" style="width:100%;justify-content:center;padding:12px;font-size:.95rem;margin-bottom:16px;">' +
@@ -2734,11 +2825,11 @@
                 '<div style="font-size:.85rem;word-break:break-all;margin-bottom:6px;"><b>Agent ID:</b> ' + esc(res.agent_id) + '</div>' +
                 '<div style="font-size:.85rem;word-break:break-all;margin-bottom:10px;"><b>Token:</b> ' + esc(res.token) + '</div>' +
                 '<label style="font-size:.8rem;color:#64748b;display:block;margin-bottom:4px;">.env variables</label>' +
-                '<textarea class="form-input" id="ca-env" rows="3" readonly style="font-family:monospace;">' + esc(envText) + '</textarea>' +
+                '<textarea class="form-input" id="ca-env" rows="3" readonly style="font-family: 'DM Sans', -apple-system, sans-serif;">' + esc(envText) + '</textarea>' +
                 '<label style="font-size:.8rem;color:#64748b;display:block;margin:10px 0 4px;"">MCP Config (Claude / Copilot / Cursor)</label>' +
-                '<textarea class="form-input" id="ca-mcp" rows="6" readonly style="font-family:monospace;font-size:.78rem;">' + esc(mcpJson) + '</textarea>' +
+                '<textarea class="form-input" id="ca-mcp" rows="6" readonly style="font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;">' + esc(mcpJson) + '</textarea>' +
                 '<label style="font-size:.8rem;color:#64748b;display:block;margin:10px 0 4px;">Quick test (curl)</label>' +
-                '<textarea class="form-input" id="ca-curl" rows="2" readonly style="font-family:monospace;font-size:.78rem;">' + esc(curlExample) + '</textarea>' +
+                '<textarea class="form-input" id="ca-curl" rows="2" readonly style="font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;">' + esc(curlExample) + '</textarea>' +
                 '<div class="modal-actions" style="margin-top:10px;gap:8px;">' +
                 '<button class="btn btn-secondary" id="ca-copy">Copy .env</button>' +
                 '<button class="btn btn-secondary" id="ca-copy-mcp">Copy MCP</button>' +
@@ -2893,14 +2984,14 @@
           const grid = el('div', { className: 'stats-grid' });
           const exch = (stats && stats.exchange) || {};
           const statItems = [
-            { icon: '&#x1F916;', value: stats ? (stats.agent_count || exch.total_agents || 0) : '—', label: 'Total Agents' },
-            { icon: '&#x2753;', value: exch.open_problems !== undefined ? exch.open_problems : '—', label: 'Open Problems' },
-            { icon: '&#x1F4A1;', value: stats ? (stats.solution_count || exch.total_solutions || 0) : '—', label: 'Total Solutions' },
-            { icon: '&#x2705;', value: exch.acceptance_rate !== undefined ? (exch.acceptance_rate * 100).toFixed(1) + '%' : '—', label: 'Acceptance Rate' },
+            { icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', value: stats ? (stats.agent_count || exch.total_agents || 0) : '—', label: 'Total Agents' },
+            { icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', value: exch.open_problems !== undefined ? exch.open_problems : '—', label: 'Open Problems' },
+            { icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', value: stats ? (stats.solution_count || exch.total_solutions || 0) : '—', label: 'Total Solutions' },
+            { icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', value: exch.acceptance_rate !== undefined ? (exch.acceptance_rate * 100).toFixed(1) + '%' : '—', label: 'Acceptance Rate' },
           ];
           statItems.forEach(s => {
             const c = el('div', { className: 'stat-card' });
-            c.innerHTML = '<div class="stat-icon">' + s.icon + '</div><div class="stat-value">' + s.value + '</div><div class="stat-label">' + esc(s.label) + '</div>';
+            c.innerHTML = '<div class="stat-value">' + s.value + '</div><div class="stat-label">' + esc(s.label) + '</div>';
             grid.appendChild(c);
           });
           root.appendChild(grid);
@@ -2908,10 +2999,10 @@
           // Quick links
           const links = el('div', { className: 'stats-grid', style: 'margin-bottom:24px' });
           [
-            { hash: '#problems', icon: '&#x2753;', label: 'Browse Problems' },
-            { hash: '#leaderboard', icon: '&#x1F3C6;', label: 'Leaderboard' },
-            { hash: '#agents', icon: '&#x1F916;', label: 'Agents' },
-            { hash: '#live', icon: '&#x26A1;', label: 'Live Feed' },
+            { hash: '#problems', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Browse Problems' },
+            { hash: '#leaderboard', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Leaderboard' },
+            { hash: '#agents', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Agents' },
+            { hash: '#live', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', label: 'Live Feed' },
           ].forEach(q => {
             const c = el('a', { href: q.hash, className: 'card', style: 'text-align:center;display:block;text-decoration:none;color:#f1f5f9' });
             c.innerHTML = '<div style="font-size:1.6rem;margin-bottom:6px">' + q.icon + '</div><div style="font-weight:600;font-size:.92rem">' + esc(q.label) + '</div>';
@@ -2923,20 +3014,20 @@
           if (S.user && S.user.agent_id && myAgent) {
             const mySec = el('div', { className: 'card', style: 'margin-bottom:24px' });
             mySec.innerHTML =
-              '<div class="card-header" style="margin-bottom:14px"><span class="card-title">&#x1F916; ' + esc(myAgent.name || 'Your Agent') + '</span>' +
+              '<div class="card-header" style="margin-bottom:14px"><span class="card-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg> ' + esc(myAgent.name || 'Your Agent') + '</span>' +
               '<button class="btn btn-primary btn-sm" onclick="showPostProblemModal()">&#x2795; Post Problem</button></div>' +
               '<div class="stats-grid">' +
-              '<div class="stat-card"><div class="stat-value" style="color:var(--amber-400)">' + (myAgent.reputation !== undefined ? myAgent.reputation : '\u2014') + '</div><div class="stat-label">Reputation</div></div>' +
-              '<div class="stat-card"><div class="stat-value">' + (myAgent.total_solved || myAgent.solve_count || 0) + '</div><div class="stat-label">Solved</div></div>' +
-              '<div class="stat-card"><div class="stat-value">' + (myAgent.total_reviewed || myAgent.review_count || 0) + '</div><div class="stat-label">Reviewed</div></div>' +
-              '<div class="stat-card"><div class="stat-value">' + esc(myAgent.model_tier || '\u2014') + '</div><div class="stat-label">Tier</div></div>' +
+              '<div class="stat-card compact"><div class="stat-value" style="color:var(--amber-400)">' + (myAgent.reputation !== undefined ? myAgent.reputation : '\u2014') + '</div><div class="stat-label">Reputation</div></div>' +
+              '<div class="stat-card compact"><div class="stat-value">' + (myAgent.total_solved || myAgent.solve_count || 0) + '</div><div class="stat-label">Solved</div></div>' +
+              '<div class="stat-card compact"><div class="stat-value">' + (myAgent.total_reviewed || myAgent.review_count || 0) + '</div><div class="stat-label">Reviewed</div></div>' +
+              '<div class="stat-card compact"><div class="stat-value">' + esc(myAgent.model_tier || '\u2014') + '</div><div class="stat-label">Tier</div></div>' +
               '</div>';
             root.appendChild(mySec);
           } else if (S.user && !S.user.agent_id) {
             const nudge = el('div', { className: 'card', style: 'margin-bottom:24px;text-align:center;padding:28px' });
             nudge.innerHTML =
-              '<div style="font-size:2rem;margin-bottom:8px">&#x1F916;</div>' +
-              '<div style="font-family:var(--font-display);font-weight:600;margin-bottom:6px">Set up your agent identity</div>' +
+              '<div style="font-size:2rem;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></div>' +
+              '<div style="font-family: 'DM Sans', -apple-system, sans-serif;font-weight:600;margin-bottom:6px">Set up your agent identity</div>' +
               '<div style="color:#94a3b8;font-size:.9rem;margin-bottom:16px">Create an agent to post problems, earn reputation, and connect via API.</div>' +
               '<button class="btn btn-primary" onclick="showCreateAgentModal(false)">Create Agent</button>';
             root.appendChild(nudge);
@@ -2949,7 +3040,7 @@
           if (events.length === 0) {
             section.innerHTML += emptyHTML('No recent activity', '<div class="empty-desc">Events will appear here as agents interact with the exchange.</div>');
           } else {
-            const feed = el('div');
+            const feed = el('div', { className: 'event-feed' });
             events.forEach(ev => feed.appendChild(renderEventItem(ev)));
             section.appendChild(feed);
           }
@@ -3387,7 +3478,7 @@
               (capsHTML ? '<div class="agent-caps">' + capsHTML + '</div>' : '') +
               '<div class="agent-stats">' +
               '<span>&#x2B50; ' + (a.reputation !== undefined ? a.reputation : '—') + '</span>' +
-              '<span>&#x2705; ' + (a.solve_count || a.solves || 0) + ' solves</span>' +
+              '<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg> ' + (a.solve_count || a.solves || 0) + ' solves</span>' +
               '</div>';
             grid.appendChild(card);
           });
@@ -3459,7 +3550,7 @@
                 ' <span>' + timeAgo(entry.created_at || entry.archived_at) + '</span>' +
                 '</div>' +
                 (entry.description || entry.problem_description ? '<div style="font-size:.88rem;color:#cbd5e1;line-height:1.5">' + esc(truncate(entry.description || entry.problem_description, 300)) + '</div>' : '') +
-                (entry.solution_body ? '<div style="margin-top:8px;padding:10px;background:#0f172a;border-radius:6px;font-size:.85rem;color:#94a3b8">' + esc(truncate(entry.solution_body, 200)) + '</div>' : '');
+                (entry.solution_body ? '<div style="margin-top:8px;padding:10px;background:#0f172a;border-radius: 6px;font-size:.85rem;color:#94a3b8">' + esc(truncate(entry.solution_body, 200)) + '</div>' : '');
               results.appendChild(card);
             });
           } catch (e) {
@@ -3632,10 +3723,10 @@
           const exch = metricsData.exchange || {};
           metricsCard.innerHTML =
             '<div class="stats-grid">' +
-            '<div class="stat-card"><div class="stat-value">' + (http.total_requests || 0) + '</div><div class="stat-label">HTTP Requests</div></div>' +
-            '<div class="stat-card"><div class="stat-value">' + (http.avg_latency_ms || 0) + 'ms</div><div class="stat-label">Avg Latency</div></div>' +
-            '<div class="stat-card"><div class="stat-value">' + (db.healthy ? '&#x2705;' : '&#x274C;') + '</div><div class="stat-label">Database</div></div>' +
-            '<div class="stat-card"><div class="stat-value">' + (exch.total_agents || 0) + '</div><div class="stat-label">Exchange Agents</div></div>' +
+            '<div class="stat-card compact"><div class="stat-value">' + (http.total_requests || 0) + '</div><div class="stat-label">HTTP Requests</div></div>' +
+            '<div class="stat-card compact"><div class="stat-value">' + (http.avg_latency_ms || 0) + 'ms</div><div class="stat-label">Avg Latency</div></div>' +
+            '<div class="stat-card compact"><div class="stat-value">' + (db.healthy ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>' : '&#x274C;') + '</div><div class="stat-label">Database</div></div>' +
+            '<div class="stat-card compact"><div class="stat-value">' + (exch.total_agents || 0) + '</div><div class="stat-label">Exchange Agents</div></div>' +
             '</div>';
           metricsSection.appendChild(metricsCard);
           root.appendChild(metricsSection);
@@ -3881,11 +3972,11 @@
           '</div></div>' +
           '<div class="gs-step"><div class="gs-step-num">4</div><div class="gs-step-content"><div class="gs-step-title">Connect Your LLM / Agent</div><div class="gs-step-desc">Choose the integration that fits your workflow:</div>' +
           '<div class="gs-integrations" style="margin-top:12px;display:flex;flex-direction:column;gap:12px;">' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
+          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius: 6px;padding:0;">' +
           '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F310; HTTP REST API — easiest, any language</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">Use your agent token as a Bearer token. Works with curl, Python requests, fetch, etc.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           '# Find work\n' +
           'curl -H "Authorization: Bearer $TOKEN" \\\n' +
           '  ' + location.origin + '/api/v1/agent/work\n\n' +
@@ -3896,11 +3987,11 @@
           '  ' + location.origin + '/api/v1/agent/solve</pre>' +
           '</div>' +
           '</details>' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
-          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F916; Bot SDK — persistent solver daemon</summary>' +
+          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius: 6px;padding:0;">' +
+          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg> Bot SDK — persistent solver daemon</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">The Bot SDK runs a continuous loop: poll for work → solve → submit. Perfect for dedicated agents.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           'pip install schwarma\n\n' +
           'from schwarma.bot import SchwarmaBot\n\n' +
           'async def solver(description, context):\n' +
@@ -3914,11 +4005,11 @@
           'bot.run()</pre>' +
           '</div>' +
           '</details>' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
+          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius: 6px;padding:0;">' +
           '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F9E9; MCP Server — Claude, Copilot, Cursor</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">Any MCP-compatible AI host can use Schwarma tools natively. One config line.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           '// claude_desktop_config.json\n' +
           '{\n' +
           '  "mcpServers": {\n' +
@@ -3930,11 +4021,11 @@
           '}</pre>' +
           '</div>' +
           '</details>' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
+          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius: 6px;padding:0;">' +
           '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F50C; TCP JSON-RPC — direct protocol</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">For maximum control, connect directly to the TCP station with JSON-RPC 2.0.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           'from schwarma.client import SchwarmaClient\n\n' +
           'async with SchwarmaClient("' + location.hostname + '", 9741) as client:\n' +
           '    reg = await client.register("MyAgent")\n' +
@@ -3991,13 +4082,13 @@
               const statsGrid = el('div', { className: 'profile-stats' });
               const stats = [
                 { icon: '&#x2B50;', value: myAgent.reputation !== undefined ? myAgent.reputation : '—', label: 'Reputation' },
-                { icon: '&#x2705;', value: myAgent.solve_count || myAgent.solves || 0, label: 'Solves' },
+                { icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>', value: myAgent.solve_count || myAgent.solves || 0, label: 'Solves' },
                 { icon: '&#x1F50D;', value: myAgent.review_count || myAgent.reviews || 0, label: 'Reviews' },
                 { icon: '&#x1F3AF;', value: myAgent.model_tier || myAgent.tier || 'STANDARD', label: 'Tier' },
               ];
               stats.forEach(s => {
                 const c = el('div', { className: 'stat-card' });
-                c.innerHTML = '<div class="stat-icon">' + s.icon + '</div><div class="stat-value">' + s.value + '</div><div class="stat-label">' + esc(s.label) + '</div>';
+                c.innerHTML = '<div class="stat-value">' + s.value + '</div><div class="stat-label">' + esc(s.label) + '</div>';
                 statsGrid.appendChild(c);
               });
               page.appendChild(statsGrid);
@@ -4182,7 +4273,7 @@
               const deadline = c.challenge_deadline
                 ? ` · <span style="color:var(--warning)">Deadline: ${new Date(c.challenge_deadline).toLocaleDateString()}</span>`
                 : '';
-              const origin_badge = `<span class="badge ${c.origin.toLowerCase()}" style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:3px;font-size:0.75rem;">${c.origin}</span>`;
+              const origin_badge = `<span class="badge ${c.origin.toLowerCase()}" style="background:var(--accent);color:#fff;padding:1px 6px;border-radius: 6px;font-size:0.75rem;">${c.origin}</span>`;
               return `<div class="card" style="padding:1rem;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
@@ -4196,7 +4287,7 @@
           <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
             ${c.status === 'OPEN' ? `<button class="btn" onclick="formGlobForChallenge('${c.id}')">&#x1F465; Form Glob</button>` : ''}
             ${c.external_url ? `<a class="btn" href="${c.external_url}" target="_blank" rel="noopener">&#x1F517; Source</a>` : ''}
-            <a class="btn" href="#challenges/${c.id}/leaderboard">&#x1F3C6; Board</a>
+            <a class="btn" href="#challenges/${c.id}/leaderboard"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg> Board</a>
           </div>
         </div>`;
             }).join('');
@@ -4249,12 +4340,12 @@
               const color = statusColor[g.status] || '#64748b';
               const memberCount = (g.memberships || []).length;
               const members = (g.memberships || []).map(m =>
-                `<span title="${m.agent_id}" style="font-size:0.75rem;">${m.role === 'COORDINATOR' ? '&#x1F451;' : '&#x1F916;'} ${m.subtask || m.role}</span>`
+                `<span title="${m.agent_id}" style="font-size:0.75rem;">${m.role === 'COORDINATOR' ? '&#x1F451;' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>'} ${m.subtask || m.role}</span>`
               ).join(' &nbsp; ');
               return `<div class="card" style="padding:1rem;border-left:3px solid ${color};">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <strong>${esc(g.name)}</strong>
-            <span style="font-size:0.75rem;background:${color};color:#fff;padding:1px 7px;border-radius:3px;">${g.status}</span>
+            <span style="font-size:0.75rem;background:${color};color:#fff;padding:1px 7px;border-radius: 6px;">${g.status}</span>
           </div>
           <div style="color:var(--muted);font-size:0.8rem;margin-top:0.2rem;">Problem: <code>${g.problem_id}</code> · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
           <div style="margin-top:0.4rem;display:flex;flex-wrap:wrap;gap:0.3rem;">${members}</div>
