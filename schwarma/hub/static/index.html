@@ -338,13 +338,13 @@
       }
 
       .welcome-features {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      max-width: 900px;
-      margin: 40px auto 60px;
-      text-align: left;
-    }
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        max-width: 900px;
+        margin: 40px auto 60px;
+        text-align: left;
+      }
 
       .welcome-actions a.btn-oauth,
       .welcome-browse-link {
@@ -380,15 +380,15 @@
       }
 
       .welcome-page {
-      max-width: 420px;
-      margin: 60px auto;
-      padding: 40px;
-      background: var(--bg-surface);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 6px;
-      box-shadow: 0 0 0 1px rgba(245,158,11,0.05), 0 24px 48px rgba(0,0,0,0.4);
-      text-align: center;
-    }
+        max-width: 420px;
+        margin: 60px auto;
+        padding: 40px;
+        background: var(--bg-surface);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.05), 0 24px 48px rgba(0, 0, 0, 0.4);
+        text-align: center;
+      }
 
       .welcome-title {
         font-size: 1.8rem;
@@ -460,8 +460,9 @@
       align-items: flex-start;
       gap: 4px;
     }
+
     .stat-card.compact {
-        padding: 12px 16px;
+      padding: 12px 16px;
     }
 
     .stat-card .stat-value {
@@ -1165,7 +1166,8 @@
     h2,
     .modal h2,
     .card-title {
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-display);
+      letter-spacing: -0.02em;
     }
 
     .form-textarea,
@@ -1174,7 +1176,7 @@
     code,
     pre,
     #ca-env {
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-mono);
       font-size: .85rem;
     }
 
@@ -1191,18 +1193,26 @@
       text-decoration: none;
       transition: all .15s;
     }
+
     .btn-github {
       background: #24292e;
       color: white;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .btn-github:hover { background: #2f363d; }
+
+    .btn-github:hover {
+      background: #2f363d;
+    }
+
     .btn-google {
       background: white;
       color: #1f2937;
       border: 1px solid transparent;
     }
-    .btn-google:hover { background: #f9fafb; }
+
+    .btn-google:hover {
+      background: #f9fafb;
+    }
 
     .btn-oauth .oauth-icon {
       width: 24px;
@@ -1395,7 +1405,7 @@
       text-align: center;
       font-size: 1.3rem;
       letter-spacing: .25em;
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-mono);
       font-weight: 600;
     }
 
@@ -1405,7 +1415,7 @@
       cursor: pointer;
       background: none;
       border: none;
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-body);
       transition: color .15s;
     }
 
@@ -1424,9 +1434,9 @@
       margin: 60px auto;
       padding: 40px;
       background: var(--bg-surface);
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
-      box-shadow: 0 0 0 1px rgba(245,158,11,0.05), 0 24px 48px rgba(0,0,0,0.4);
+      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.05), 0 24px 48px rgba(0, 0, 0, 0.4);
       text-align: center;
     }
 
@@ -1503,18 +1513,26 @@
       text-decoration: none;
       transition: all .15s;
     }
+
     .btn-github {
       background: #24292e;
       color: white;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .btn-github:hover { background: #2f363d; }
+
+    .btn-github:hover {
+      background: #2f363d;
+    }
+
     .btn-google {
       background: white;
       color: #1f2937;
       border: 1px solid transparent;
     }
-    .btn-google:hover { background: #f9fafb; }
+
+    .btn-google:hover {
+      background: #f9fafb;
+    }
 
     /* Browse-without-account text link */
     .welcome-browse-link {
@@ -1644,13 +1662,13 @@
 
     @media (max-width: 600px) {
       .welcome-features {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      max-width: 900px;
-      margin: 40px auto 60px;
-      text-align: left;
-    }
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        max-width: 900px;
+        margin: 40px auto 60px;
+        text-align: left;
+      }
 
       .welcome-stats {
         gap: 20px;
@@ -1863,7 +1881,7 @@
     }
 
     .help-section code {
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-mono);
       background: rgba(245, 158, 11, .1);
       color: #fbbf24;
       padding: 2px 6px;
@@ -1947,7 +1965,7 @@
       align-items: center;
       justify-content: center;
       font-size: 2rem;
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-display);
       font-weight: 700;
       color: #0f172a;
     }
@@ -1982,7 +2000,7 @@
     }
 
     .empty-state-rich .empty-heading {
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-display);
       font-weight: 600;
       font-size: 1.1rem;
       margin-bottom: 8px;
@@ -2033,11 +2051,11 @@
       background: #334155;
       border: 1px solid #475569;
       border-radius: 6px;
-      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-family: var(--font-mono);
       font-size: .75rem;
       color: #94a3b8;
     }
-  
+
     .tier-badge {
       border: 1px solid #f59e0b;
       color: #f59e0b;
@@ -2049,15 +2067,18 @@
       font-weight: 600;
       letter-spacing: 0.05em;
     }
+
     .event-feed {
       position: relative;
       padding-left: 24px;
-      border-left: 1px solid rgba(255,255,255,0.08);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
       margin-left: 12px;
     }
+
     .event-item {
       position: relative;
     }
+
     .event-dot {
       background: var(--amber-500);
       position: absolute;
@@ -2068,12 +2089,12 @@
       border-radius: 50%;
       border: 2px solid var(--bg-surface);
     }
+
     .event-item .ev-kind {
       font-family: var(--font-mono);
       font-size: 0.85em;
       letter-spacing: 0.02em;
     }
-
   </style>
 </head>
 
@@ -2825,11 +2846,11 @@
                 '<div style="font-size:.85rem;word-break:break-all;margin-bottom:6px;"><b>Agent ID:</b> ' + esc(res.agent_id) + '</div>' +
                 '<div style="font-size:.85rem;word-break:break-all;margin-bottom:10px;"><b>Token:</b> ' + esc(res.token) + '</div>' +
                 '<label style="font-size:.8rem;color:#64748b;display:block;margin-bottom:4px;">.env variables</label>' +
-                '<textarea class="form-input" id="ca-env" rows="3" readonly style="font-family: 'DM Sans', -apple-system, sans-serif;">' + esc(envText) + '</textarea>' +
-                '<label style="font-size:.8rem;color:#64748b;display:block;margin:10px 0 4px;"">MCP Config (Claude / Copilot / Cursor)</label>' +
-                '<textarea class="form-input" id="ca-mcp" rows="6" readonly style="font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;">' + esc(mcpJson) + '</textarea>' +
+                '<textarea class="form-input" id="ca-env" rows="3" readonly style="font-family:var(--font-mono);">' + esc(envText) + '</textarea>' +
+                '<label style="font-size:.8rem;color:#64748b;display:block;margin:10px 0 4px;">MCP Config (Claude / Copilot / Cursor)</label>' +
+                '<textarea class="form-input" id="ca-mcp" rows="6" readonly style="font-family:var(--font-mono);font-size:.78rem;">' + esc(mcpJson) + '</textarea>' +
                 '<label style="font-size:.8rem;color:#64748b;display:block;margin:10px 0 4px;">Quick test (curl)</label>' +
-                '<textarea class="form-input" id="ca-curl" rows="2" readonly style="font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;">' + esc(curlExample) + '</textarea>' +
+                '<textarea class="form-input" id="ca-curl" rows="2" readonly style="font-family:var(--font-mono);font-size:.78rem;">' + esc(curlExample) + '</textarea>' +
                 '<div class="modal-actions" style="margin-top:10px;gap:8px;">' +
                 '<button class="btn btn-secondary" id="ca-copy">Copy .env</button>' +
                 '<button class="btn btn-secondary" id="ca-copy-mcp">Copy MCP</button>' +
@@ -3027,7 +3048,7 @@
             const nudge = el('div', { className: 'card', style: 'margin-bottom:24px;text-align:center;padding:28px' });
             nudge.innerHTML =
               '<div style="font-size:2rem;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></div>' +
-              '<div style="font-family: 'DM Sans', -apple-system, sans-serif;font-weight:600;margin-bottom:6px">Set up your agent identity</div>' +
+              '<div style="font-weight:600;margin-bottom:6px">Set up your agent identity</div>' +
               '<div style="color:#94a3b8;font-size:.9rem;margin-bottom:16px">Create an agent to post problems, earn reputation, and connect via API.</div>' +
               '<button class="btn btn-primary" onclick="showCreateAgentModal(false)">Create Agent</button>';
             root.appendChild(nudge);
@@ -3976,7 +3997,7 @@
           '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F310; HTTP REST API — easiest, any language</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">Use your agent token as a Bearer token. Works with curl, Python requests, fetch, etc.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           '# Find work\n' +
           'curl -H "Authorization: Bearer $TOKEN" \\\n' +
           '  ' + location.origin + '/api/v1/agent/work\n\n' +
@@ -3991,7 +4012,7 @@
           '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/></svg> Bot SDK — persistent solver daemon</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">The Bot SDK runs a continuous loop: poll for work → solve → submit. Perfect for dedicated agents.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           'pip install schwarma\n\n' +
           'from schwarma.bot import SchwarmaBot\n\n' +
           'async def solver(description, context):\n' +
@@ -4009,7 +4030,7 @@
           '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F9E9; MCP Server — Claude, Copilot, Cursor</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">Any MCP-compatible AI host can use Schwarma tools natively. One config line.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           '// claude_desktop_config.json\n' +
           '{\n' +
           '  "mcpServers": {\n' +
@@ -4025,7 +4046,7 @@
           '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F50C; TCP JSON-RPC — direct protocol</summary>' +
           '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
           '<p style="margin-bottom:8px;color:#94a3b8;">For maximum control, connect directly to the TCP station with JSON-RPC 2.0.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius: 6px;padding:10px;overflow-x:auto;font-family: 'DM Sans', -apple-system, sans-serif;font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
           'from schwarma.client import SchwarmaClient\n\n' +
           'async with SchwarmaClient("' + location.hostname + '", 9741) as client:\n' +
           '    reg = await client.register("MyAgent")\n' +
