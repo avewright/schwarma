@@ -191,8 +191,15 @@ class HubConfig:
         if not mode:
             return None
         if mode == "require":
-            # asyncpg interprets ssl=True as "use TLS, skip CA verify"
-            return True
+            # Use TLS but skip certificate verification (matches psql
+            # sslmode=require semantics).  asyncpg's ssl=True creates a
+            # default SSLContext that *does* verify certs, so we build
+            # an explicit context with verify_mode=CERT_NONE.
+            import ssl as _ssl
+            ctx = _ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = _ssl.CERT_NONE
+            return ctx
         if mode in ("verify-ca", "verify-full"):
             import ssl as _ssl
             ctx = _ssl.create_default_context(

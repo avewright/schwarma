@@ -1078,10 +1078,14 @@ class TestHubConfigNewFields(unittest.TestCase):
         assert cfg.database_ssl == ""
         assert cfg.make_db_ssl_context() is None
 
-    def test_db_ssl_require_returns_true(self):
+    def test_db_ssl_require_returns_ssl_context_no_verify(self):
+        import ssl
         from schwarma.hub.config import HubConfig
         cfg = HubConfig(database_ssl="require")
-        assert cfg.make_db_ssl_context() is True
+        ctx = cfg.make_db_ssl_context()
+        assert isinstance(ctx, ssl.SSLContext)
+        assert ctx.check_hostname is False
+        assert ctx.verify_mode == ssl.CERT_NONE
 
     def test_db_ssl_verify_ca_returns_ssl_context(self):
         import ssl
