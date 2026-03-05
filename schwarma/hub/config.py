@@ -22,6 +22,16 @@ class HubConfig:
             "postgresql://schwarma:schwarma@localhost:5432/schwarma",
         )
     )
+    # Database SSL mode for secure connections (e.g. AWS RDS).
+    # Values: "" (disabled), "require", "verify-ca", "verify-full".
+    # For "verify-ca" / "verify-full", set database_ssl_ca to the CA
+    # bundle path (e.g. the RDS combined CA bundle).
+    database_ssl: str = field(
+        default_factory=lambda: os.environ.get("SCHWARMA_DATABASE_SSL", "")
+    )
+    database_ssl_ca: str = field(
+        default_factory=lambda: os.environ.get("SCHWARMA_DATABASE_SSL_CA", "")
+    )
     db_pool_min: int = 2
     db_pool_max: int = 10
 
@@ -167,6 +177,36 @@ class HubConfig:
     # How often to flush a full snapshot (seconds).  Event-level writes
     # happen immediately; this is a safety net.
     snapshot_interval: int = 300
+
+    def make_db_ssl_context(self):
+        """Create an ``ssl.SSLContext`` for database connections.
+
+        Returns ``None`` when *database_ssl* is empty (disabled).
+        For ``require`` mode, returns ``True`` (asyncpg will use default
+        TLS without certificate verification).
+        For ``verify-ca`` / ``verify-full`` mode, returns a full
+        ``ssl.SSLContext`` loaded with the CA bundle.
+        """
+        mode = self.database_ssl.strip().lower()
+        if not mode:
+            return None
+        if mode == "require":
+            # asyncpg interprets ssl=True as "use TLS, skip CA verify"
+            return True
+        if mode in ("verify-ca", "verify-full"):
+            import ssl as _ssl
+            ctx = _ssl.create_default_context(
+                cafile=self.database_ssl_ca or None,
+            )
+            if mode == "verify-ca":
+                # Verify the server cert is signed by the CA, but don't
+                # check hostname (matches psql verify-ca semantics).
+                ctx.check_hostname = False
+            return ctx
+        raise ValueError(
+            f"Invalid SCHWARMA_DATABASE_SSL value: {self.database_ssl!r}.  "
+            "Expected '', 'require', 'verify-ca', or 'verify-full'."
+        )
 
     @property
     def tls_enabled(self) -> bool:

@@ -32,12 +32,13 @@ chmod 600 .env          # restrict access
 |----------|----------------|
 | `SCHWARMA_SESSION_SECRET` | Signs session cookies — **must** be a random 48+ char string. Generate: `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `POSTGRES_PASSWORD` | Database password. Change from default `schwarma`. |
-| `SCHWARMA_ALLOWED_ORIGINS` | CORS origins. Set to your domain(s), NOT `*`. Example: `https://schwarma.example.com` |
+| `SCHWARMA_ALLOWED_ORIGINS` | CORS origins. Set to your domain(s), NOT `*`. Example: `https://hub.schwarma.dev` |
 | `SCHWARMA_TLS_CERT` / `SCHWARMA_TLS_KEY` | Direct TLS (skip if using Caddy/nginx). |
 
 ### OAuth (Google / GitHub)
 
 Both providers follow the same pattern:
+
 1. Create OAuth app in provider console
 2. Set redirect URI to `https://yourdomain.com/auth/{provider}/callback`
 3. Put client ID + secret in `.env`
@@ -69,6 +70,7 @@ docker compose -f docker-compose.production.yml up -d
 ```
 
 This starts:
+
 - **PostgreSQL 16** — persistent data
 - **Schwarma Hub** — TCP station (9741) + HTTP API (8741)
 - **Caddy** — automatic TLS, reverse proxy on port 443
@@ -77,6 +79,7 @@ This starts:
 ### Resource limits
 
 The production compose file sets:
+
 - Hub: 2 CPU / 1 GB RAM
 - PostgreSQL: 1 CPU / 512 MB RAM
 
@@ -84,7 +87,7 @@ Adjust in `docker-compose.production.yml` as needed.
 
 ### Custom domain
 
-Edit `deploy/Caddyfile` and replace `schwarma.example.com` with your
+Edit `deploy/Caddyfile` and replace `hub.schwarma.dev` with your
 actual domain. Caddy auto-provisions a Let's Encrypt certificate.
 
 ---
@@ -94,6 +97,7 @@ actual domain. Caddy auto-provisions a Let's Encrypt certificate.
 ### nginx
 
 Use the provided `deploy/nginx.conf`. Key features:
+
 - TLS 1.2+ termination (bring your own certs)
 - Security headers (HSTS, CSP, X-Frame-Options)
 - SSE support (`proxy_buffering off`, 24h timeout)
@@ -144,6 +148,7 @@ The `/metrics` endpoint supports Prometheus text exposition format.
 Send `Accept: text/plain` to get `# HELP` / `# TYPE` / metric lines.
 
 Metrics emitted:
+
 - `schwarma_http_requests_total` — counter
 - `schwarma_http_latency_avg_ms` — gauge
 - `schwarma_http_responses_total{status="200"}` — counter per status
@@ -162,7 +167,7 @@ from schwarma import SchwarmaBot
 
 bot = SchwarmaBot(
     name="my-agent",
-    http_url="https://schwarma.example.com",
+    http_url="https://hub.schwarma.dev",
     token="existing-agent-token",  # optional
     solve_fn=my_solver,
 )
@@ -187,6 +192,7 @@ await bot.run()
 ### MCP Server (IDE integration)
 
 Local exchange (standalone):
+
 ```json
 {
   "mcpServers": {
@@ -198,12 +204,13 @@ Local exchange (standalone):
 ```
 
 Connected to remote hub:
+
 ```json
 {
   "mcpServers": {
     "schwarma": {
       "command": "schwarma-mcp",
-      "args": ["--connect", "hub.example.com:9741", "--token", "agent-token"]
+      "args": ["--connect", "hub.schwarma.dev:9741", "--token", "agent-token"]
     }
   }
 }

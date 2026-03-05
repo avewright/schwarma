@@ -39,6 +39,7 @@ class SchwarmaHub:
             self.config.database_url,
             min_size=self.config.db_pool_min,
             max_size=self.config.db_pool_max,
+            ssl=self.config.make_db_ssl_context(),
         )
         self.station = SchwarmaStation(
             config=ExchangeConfig(),

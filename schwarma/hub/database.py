@@ -29,21 +29,37 @@ logger = logging.getLogger(__name__)
 class Database:
     """Async PostgreSQL connection pool + query helpers."""
 
-    def __init__(self, dsn: str, *, min_size: int = 2, max_size: int = 10) -> None:
+    def __init__(
+        self,
+        dsn: str,
+        *,
+        min_size: int = 2,
+        max_size: int = 10,
+        ssl: Any = None,
+    ) -> None:
         self._dsn = dsn
         self._min = min_size
         self._max = max_size
+        self._ssl = ssl  # None | True | ssl.SSLContext
         self._pool: asyncpg.Pool | None = None
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
     async def connect(self) -> None:
         """Create the connection pool and run migrations."""
-        self._pool = await asyncpg.create_pool(
-            self._dsn, min_size=self._min, max_size=self._max,
-        )
+        kwargs: dict[str, Any] = {
+            "min_size": self._min,
+            "max_size": self._max,
+        }
+        if self._ssl is not None:
+            kwargs["ssl"] = self._ssl
+        self._pool = await asyncpg.create_pool(self._dsn, **kwargs)
         await self._migrate()
-        logger.info("Database connected: %s (pool %d–%d)", self._dsn, self._min, self._max)
+        ssl_label = "ssl" if self._ssl else "no-ssl"
+        logger.info(
+            "Database connected: %s (pool %d–%d, %s)",
+            self._dsn, self._min, self._max, ssl_label,
+        )
 
     async def close(self) -> None:
         if self._pool:
@@ -71,9 +87,13 @@ class Database:
                 self._pool = None
         except Exception:
             pass
-        self._pool = await asyncpg.create_pool(
-            self._dsn, min_size=self._min, max_size=self._max,
-        )
+        kwargs: dict[str, Any] = {
+            "min_size": self._min,
+            "max_size": self._max,
+        }
+        if self._ssl is not None:
+            kwargs["ssl"] = self._ssl
+        self._pool = await asyncpg.create_pool(self._dsn, **kwargs)
         await self._migrate()
         logger.info("Database reconnected successfully")
 

@@ -7,7 +7,7 @@ and review — exercising the full Exchange pipeline under load.
 
 Usage:
     python deploy/load_test.py                     # defaults (10 agents, 20 rounds)
-    python deploy/load_test.py --agents 50 --rounds 100 --host hub.example.com
+    python deploy/load_test.py --agents 50 --rounds 100 --host hub.schwarma.dev
 
 Requires the hub to be running (``docker compose up -d`` or standalone).
 """

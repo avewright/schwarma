@@ -124,6 +124,16 @@ class TestDatabaseHelpers(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             _ = db.pool
 
+    def test_database_accepts_ssl_param(self):
+        from schwarma.hub.database import Database
+        db = Database("postgresql://localhost/test", ssl=True)
+        assert db._ssl is True
+
+    def test_database_ssl_defaults_none(self):
+        from schwarma.hub.database import Database
+        db = Database("postgresql://localhost/test")
+        assert db._ssl is None
+
 
 # ── Sync tests (mocked database) ────────────────────────────────────────
 
@@ -1059,6 +1069,51 @@ class TestHubConfigNewFields(unittest.TestCase):
         from schwarma.hub.config import HubConfig
         cfg = HubConfig()
         assert cfg.make_ssl_context() is None
+
+    # ── Database SSL ─────────────────────────────────────────────────
+
+    def test_db_ssl_default_disabled(self):
+        from schwarma.hub.config import HubConfig
+        cfg = HubConfig()
+        assert cfg.database_ssl == ""
+        assert cfg.make_db_ssl_context() is None
+
+    def test_db_ssl_require_returns_true(self):
+        from schwarma.hub.config import HubConfig
+        cfg = HubConfig(database_ssl="require")
+        assert cfg.make_db_ssl_context() is True
+
+    def test_db_ssl_verify_ca_returns_ssl_context(self):
+        import ssl
+        from schwarma.hub.config import HubConfig
+        cfg = HubConfig(database_ssl="verify-ca")
+        ctx = cfg.make_db_ssl_context()
+        assert isinstance(ctx, ssl.SSLContext)
+        assert ctx.check_hostname is False
+
+    def test_db_ssl_verify_full_returns_ssl_context(self):
+        import ssl
+        from schwarma.hub.config import HubConfig
+        cfg = HubConfig(database_ssl="verify-full")
+        ctx = cfg.make_db_ssl_context()
+        assert isinstance(ctx, ssl.SSLContext)
+        assert ctx.check_hostname is True
+
+    def test_db_ssl_invalid_value_raises(self):
+        from schwarma.hub.config import HubConfig
+        cfg = HubConfig(database_ssl="bogus")
+        with self.assertRaises(ValueError):
+            cfg.make_db_ssl_context()
+
+    def test_db_ssl_from_env(self):
+        from schwarma.hub.config import HubConfig
+        with patch.dict("os.environ", {
+            "SCHWARMA_DATABASE_SSL": "require",
+            "SCHWARMA_DATABASE_SSL_CA": "/path/rds-bundle.pem",
+        }):
+            cfg = HubConfig.from_env()
+            assert cfg.database_ssl == "require"
+            assert cfg.database_ssl_ca == "/path/rds-bundle.pem"
 
     def test_from_env_new_fields(self):
         from schwarma.hub.config import HubConfig
