@@ -334,6 +334,22 @@ _EVENT_HANDLERS: dict[EventKind, Any] = {
 
 # ── Row → domain object helpers ──────────────────────────────────────────
 
+def _decode_jsonb(value: Any, *, fallback: Any = None) -> Any:
+    """Safely decode a JSONB value that may be a Python object or a JSON string.
+
+    asyncpg auto-decodes JSONB in most setups, but some versions/configs
+    return raw JSON strings.  This helper normalises both cases.
+    """
+    if value is None:
+        return fallback
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return fallback
+    return value  # already decoded by asyncpg
+
+
 def _problem_from_row(row: dict) -> Problem:
     """Convert a database row to a Problem dataclass."""
     p = Problem(
@@ -346,7 +362,7 @@ def _problem_from_row(row: dict) -> Problem:
         min_solver_tier=ModelTier[row["min_solver_tier"]] if row.get("min_solver_tier") else None,
         max_solvers=row.get("max_solvers", 1),
         deadline=row.get("deadline"),
-        context=row.get("context") or {},
+        context=_decode_jsonb(row.get("context"), fallback={}),
     )
     p.id = row["id"]
     p.status = ProblemStatus[row["status"]]
@@ -376,11 +392,14 @@ def _solution_from_row(row: dict) -> Solution:
     s.review_ids = list(row.get("review_ids") or [])
     s.metadata = row.get("metadata") or {}
 
-    if row.get("fix_package"):
-        s.fix_package = FixPackage.from_dict(row["fix_package"])
-    if row.get("outcome"):
-        s.outcome = OutcomeRecord.from_dict(row["outcome"])
-    if row.get("revision_history"):
+    fp = _decode_jsonb(row.get("fix_package"))
+    if fp:
+        s.fix_package = FixPackage.from_dict(fp)
+    outcome = _decode_jsonb(row.get("outcome"))
+    if outcome:
+        s.outcome = OutcomeRecord.from_dict(outcome)
+    rev_list = _decode_jsonb(row.get("revision_history"), fallback=[])
+    if rev_list:
         s.revision_history = [
             RevisionRound(
                 round_number=rr["round_number"],
@@ -388,7 +407,7 @@ def _solution_from_row(row: dict) -> Solution:
                 reviewer_id=UUID(rr["reviewer_id"]) if isinstance(rr["reviewer_id"], str) else rr["reviewer_id"],
                 revised_body=rr.get("revised_body", ""),
             )
-            for rr in row["revision_history"]
+            for rr in rev_list
         ]
     return s
 
@@ -428,7 +447,7 @@ def _archive_entry_from_row(row: dict) -> ArchiveEntry:
     )
     entry.created_at = row.get("created_at", datetime.now(timezone.utc))
     # Reviews are stored as JSONB array
-    reviews_data = row.get("reviews") or []
+    reviews_data = _decode_jsonb(row.get("reviews"), fallback=[])
     entry.reviews = [
         ReviewSnapshot(
             reviewer_id=UUID(rd["reviewer_id"]) if isinstance(rd["reviewer_id"], str) else rd["reviewer_id"],

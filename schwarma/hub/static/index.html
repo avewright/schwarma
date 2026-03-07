@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@400;500;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
   <style>
     /* ── Reset & Base ──────────────────────────────────────────────────── */
@@ -26,33 +26,53 @@
     }
 
     :root {
-      --font-display: 'Outfit', sans-serif;
-      --font-body: 'DM Sans', sans-serif;
+      --font-display: 'Sora', sans-serif;
+      --font-body: 'Outfit', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
-      --amber-500: #f59e0b;
-      --amber-400: #fbbf24;
-      --amber-600: #d97706;
-      --slate-900: #0f172a;
-      --slate-800: #1e293b;
-      --slate-700: #334155;
-      --slate-600: #475569;
-      --slate-500: #64748b;
-      --slate-400: #94a3b8;
-      --slate-300: #cbd5e1;
-      --slate-100: #f1f5f9;
+      --accent-500: #0ea5e9;
+      --accent-400: #38bdf8;
+      --accent-600: #0284c7;
+      --success: #10b981;
+      --success-light: #34d399;
+      --bg-deepest: #080a12;
+      --bg-card: #0e1019;
+      --bg-elevated: #151720;
+      --border: #1e2032;
+      --border-hover: #2a2d42;
+      --text-primary: #e2e4ef;
+      --text-secondary: #8b8fa6;
+      --text-muted: #5c5f75;
+      /* Compat aliases for legacy references */
+      --amber-500: #0ea5e9;
+      --amber-400: #38bdf8;
+      --amber-600: #0284c7;
+      --slate-900: #080a12;
+      --slate-800: #0e1019;
+      --slate-700: #1e2032;
+      --slate-600: #2a2d42;
+      --slate-500: #5c5f75;
+      --slate-400: #8b8fa6;
+      --slate-300: #c5c7d4;
+      --slate-100: #e2e4ef;
+      /* Missing vars used in Challenges/Globs */
+      --muted: #5c5f75;
+      --warning: #f59e0b;
+      --accent: #0ea5e9;
     }
 
     body {
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0f172a;
-      color: #f1f5f9;
+      font-family: var(--font-body);
+      background: #080a12;
+      color: #e2e4ef;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      font-weight: 400;
+      letter-spacing: 0.01em;
     }
 
     a {
-      color: #f59e0b;
+      color: #38bdf8;
       text-decoration: none;
     }
 
@@ -65,23 +85,35 @@
       font-family: inherit;
     }
 
+    /* Focus visible (keyboard navigation) */
+    :focus-visible {
+      outline: 2px solid #0ea5e9;
+      outline-offset: 2px;
+    }
+
     /* ── Scrollbar ─────────────────────────────────────────────────────── */
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
     }
 
     ::-webkit-scrollbar-track {
-      background: #0f172a;
+      background: transparent;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
+      background: #1e2032;
+      border-radius: 3px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
+      background: #2a2d42;
+    }
+
+    /* Firefox scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #1e2032 transparent;
     }
 
     /* ── Layout ────────────────────────────────────────────────────────── */
@@ -113,8 +145,8 @@
     #sidebar {
       width: 240px;
       min-width: 240px;
-      background: #1e293b;
-      border-right: 1px solid #334155;
+      background: linear-gradient(180deg, #0b0d16 0%, #080a12 100%);
+      border-right: 1px solid rgba(255, 255, 255, .03);
       display: flex;
       flex-direction: column;
       position: fixed;
@@ -126,10 +158,10 @@
     }
 
     #sidebar .logo {
-      padding: 14px 18px;
+      padding: 16px 18px;
       font-size: 1.35rem;
       font-weight: 700;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
       display: flex;
       align-items: center;
       gap: 10px;
@@ -153,22 +185,25 @@
       align-items: center;
       gap: 10px;
       padding: 10px 18px;
-      color: #94a3b8;
+      color: #8b8fa6;
       font-size: .93rem;
-      transition: all .15s;
+      transition: all .2s cubic-bezier(.4, 0, .2, 1);
       border-left: 3px solid transparent;
+      border-radius: 0 6px 6px 0;
+      margin-right: 8px;
+      letter-spacing: .01em;
     }
 
     #sidebar nav a:hover {
-      color: #f1f5f9;
-      background: rgba(248, 250, 252, .04);
+      color: #e2e4ef;
+      background: rgba(255, 255, 255, .03);
       text-decoration: none;
     }
 
     #sidebar nav a.active {
-      color: #f59e0b;
-      background: rgba(245, 158, 11, .07);
-      border-left-color: #f59e0b;
+      color: #38bdf8;
+      background: rgba(14, 165, 233, .06);
+      border-left-color: #0ea5e9;
       font-weight: 600;
     }
 
@@ -180,9 +215,9 @@
 
     #sidebar .sidebar-footer {
       padding: 14px 18px;
-      border-top: 1px solid #334155;
+      border-top: 1px solid #1e2032;
       font-size: .82rem;
-      color: #64748b;
+      color: #5c5f75;
     }
 
     #main-area {
@@ -195,8 +230,10 @@
 
     #topbar {
       height: 56px;
-      background: #1e293b;
-      border-bottom: 1px solid #334155;
+      background: rgba(8, 10, 18, .88);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      border-bottom: 1px solid rgba(255, 255, 255, .03);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -215,13 +252,15 @@
     #topbar .page-title {
       font-size: 1.1rem;
       font-weight: 600;
+      letter-spacing: -.01em;
+      color: #e2e4ef;
     }
 
     #menu-btn {
       display: none;
       background: none;
       border: none;
-      color: #f1f5f9;
+      color: #e8e9f0;
       font-size: 1.4rem;
       padding: 4px 8px;
     }
@@ -238,19 +277,19 @@
 
     #user-btn {
       background: none;
-      border: 1px solid #334155;
+      border: 1px solid #252630;
       border-radius: 8px;
-      color: #f1f5f9;
+      color: #e8e9f0;
       padding: 6px 14px;
       font-size: .88rem;
       display: flex;
       align-items: center;
       gap: 8px;
-      transition: all .15s;
+      transition: all .18s ease;
     }
 
     #user-btn:hover {
-      border-color: #f59e0b;
+      border-color: #38bdf8;
     }
 
     #user-btn img {
@@ -264,8 +303,8 @@
       position: absolute;
       top: 44px;
       right: 0;
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: #12131a;
+      border: 1px solid #252630;
       border-radius: 8px;
       min-width: 200px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
@@ -281,9 +320,9 @@
     #user-dropdown .dd-item {
       display: block;
       padding: 10px 16px;
-      color: #cbd5e1;
+      color: #c5c7d4;
       font-size: .88rem;
-      transition: background .12s;
+      transition: background .15s ease;
       border: none;
       background: none;
       width: 100%;
@@ -292,12 +331,12 @@
     }
 
     #user-dropdown .dd-item:hover {
-      background: rgba(248, 250, 252, .06);
-      color: #f1f5f9;
+      background: rgba(232, 233, 240, .06);
+      color: #e8e9f0;
     }
 
     #user-dropdown .dd-divider {
-      border-top: 1px solid #334155;
+      border-top: 1px solid #252630;
     }
 
     #content {
@@ -411,15 +450,18 @@
 
     /* ── Cards ─────────────────────────────────────────────────────────── */
     .card {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
+      background: rgba(14, 16, 25, .7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
       padding: 20px;
-      transition: border-color .2s;
+      transition: border-color .25s, box-shadow .25s;
     }
 
     .card:hover {
-      border-color: #475569;
+      border-color: rgba(14, 165, 233, .15);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .03);
     }
 
     .card-header {
@@ -432,6 +474,7 @@
     .card-title {
       font-size: 1rem;
       font-weight: 600;
+      letter-spacing: -.01em;
     }
 
     /* ── Stat cards ────────────────────────────────────────────────────── */
@@ -443,23 +486,49 @@
     }
 
     .stat-card {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
+      background: rgba(14, 16, 25, .7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
       padding: 20px;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .25s, transform .25s;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #0ea5e9, #06b6d4, transparent);
+      opacity: 0;
+      transition: opacity .25s;
+    }
+
+    .stat-card:hover {
+      border-color: rgba(14, 165, 233, .18);
+      transform: translateY(-2px);
+    }
+
+    .stat-card:hover::before {
+      opacity: 1;
     }
 
     .stat-card .stat-value {
       font-size: 2rem;
       font-weight: 700;
-      color: #f59e0b;
+      color: #38bdf8;
       margin-bottom: 4px;
     }
 
     .stat-card .stat-label {
       font-size: .85rem;
-      color: #94a3b8;
+      color: #8b8fa6;
     }
 
     .stat-card .stat-icon {
@@ -469,59 +538,72 @@
 
     /* ── Badges ────────────────────────────────────────────────────────── */
     .badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: .78rem;
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: .72rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: .03em;
+      letter-spacing: .05em;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      font-family: var(--font-body);
     }
 
     .badge-open {
-      background: rgba(34, 197, 94, .15);
+      background: rgba(34, 197, 94, .12);
       color: #22c55e;
+      border-color: rgba(34, 197, 94, .2);
     }
 
     .badge-claimed {
-      background: rgba(59, 130, 246, .15);
-      color: #3b82f6;
+      background: rgba(59, 130, 246, .12);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, .2);
     }
 
     .badge-solved {
-      background: rgba(168, 85, 247, .15);
-      color: #a855f7;
+      background: rgba(168, 85, 247, .12);
+      color: #c084fc;
+      border-color: rgba(168, 85, 247, .2);
     }
 
     .badge-closed {
-      background: rgba(148, 163, 184, .15);
-      color: #94a3b8;
+      background: rgba(148, 163, 184, .1);
+      color: #9496a8;
+      border-color: rgba(148, 163, 184, .15);
     }
 
     .badge-pending {
-      background: rgba(234, 179, 8, .15);
-      color: #eab308;
+      background: rgba(251, 191, 36, .12);
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, .2);
     }
 
     .badge-accepted {
-      background: rgba(34, 197, 94, .15);
+      background: rgba(34, 197, 94, .12);
       color: #22c55e;
+      border-color: rgba(34, 197, 94, .2);
     }
 
     .badge-rejected {
-      background: rgba(239, 68, 68, .15);
-      color: #ef4444;
+      background: rgba(239, 68, 68, .12);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, .2);
     }
 
     .badge-tag {
-      background: rgba(245, 158, 11, .1);
-      color: #f59e0b;
+      background: rgba(14, 165, 233, .08);
+      color: #38bdf8;
+      border-color: rgba(14, 165, 233, .15);
       margin-right: 4px;
     }
 
     .badge-tier {
-      background: rgba(99, 102, 241, .15);
-      color: #818cf8;
+      background: rgba(99, 102, 241, .12);
+      color: #a5b4fc;
+      border-color: rgba(99, 102, 241, .2);
     }
 
     /* ── Buttons ───────────────────────────────────────────────────────── */
@@ -534,25 +616,30 @@
       font-size: .88rem;
       font-weight: 500;
       border: none;
-      transition: all .15s;
+      cursor: pointer;
+      transition: all .18s ease;
+      font-family: var(--font-body);
     }
 
     .btn-primary {
-      background: #f59e0b;
-      color: #0f172a;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(14, 165, 233, .2);
     }
 
     .btn-primary:hover {
-      background: #d97706;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      box-shadow: 0 4px 20px rgba(14, 165, 233, .3);
     }
 
     .btn-secondary {
-      background: #334155;
-      color: #f1f5f9;
+      background: #252630;
+      color: #e8e9f0;
     }
 
     .btn-secondary:hover {
-      background: #475569;
+      background: #2e2f3a;
     }
 
     .btn-danger {
@@ -572,24 +659,29 @@
 
     .btn-outline {
       background: transparent;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #f1f5f9;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e8e9f0;
     }
 
     .btn-outline:hover {
-      border-color: rgba(255, 255, 255, 0.4);
-      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(14, 165, 233, .4);
+      background: rgba(14, 165, 233, .06);
+      color: #e2e4ed;
     }
 
     .btn-ghost {
       background: transparent;
       border: 1px solid transparent;
-      color: #94a3b8;
+      color: #9496a8;
     }
 
     .btn-ghost:hover {
-      color: #f1f5f9;
-      background: rgba(248, 250, 252, .04);
+      color: #e8e9f0;
+      background: rgba(232, 233, 240, .04);
+    }
+
+    .btn:active {
+      transform: scale(.97);
     }
 
     /* ── Forms ─────────────────────────────────────────────────────────── */
@@ -599,31 +691,45 @@
 
     .form-group label {
       display: block;
-      font-size: .85rem;
-      color: #94a3b8;
-      margin-bottom: 6px;
+      font-size: .82rem;
+      color: #9496a8;
+      margin-bottom: 8px;
       font-weight: 500;
+      letter-spacing: .02em;
     }
 
     .form-input,
     .form-select,
     .form-textarea {
       width: 100%;
-      padding: 9px 14px;
-      background: #0f172a;
-      border: 1px solid #334155;
+      padding: 10px 14px;
+      background: rgba(10, 11, 16, .6);
+      border: 1px solid #252630;
       border-radius: 8px;
-      color: #f1f5f9;
+      color: #e8e9f0;
       font-size: .9rem;
       font-family: inherit;
-      transition: border-color .15s;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: #6b6d7e;
+    }
+
+    .form-input:hover,
+    .form-select:hover,
+    .form-textarea:hover {
+      border-color: #2e2f3a;
     }
 
     .form-input:focus,
     .form-select:focus,
     .form-textarea:focus {
       outline: none;
-      border-color: #f59e0b;
+      border-color: #0ea5e9;
+      background: rgba(10, 11, 16, .8);
+      box-shadow: 0 0 0 3px rgba(14, 165, 233, .08);
     }
 
     .form-textarea {
@@ -636,7 +742,8 @@
     }
 
     .form-select option {
-      background: #1e293b;
+      background: #0e1019;
+      color: #e2e4ef;
     }
 
     /* ── Tables ────────────────────────────────────────────────────────── */
@@ -651,22 +758,24 @@
 
     th,
     td {
-      padding: 10px 14px;
+      padding: 11px 16px;
       text-align: left;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid rgba(37, 38, 48, .7);
       font-size: .9rem;
     }
 
     th {
-      color: #94a3b8;
+      color: #6b6d7e;
       font-weight: 600;
-      font-size: .82rem;
+      font-size: .78rem;
       text-transform: uppercase;
-      letter-spacing: .04em;
+      letter-spacing: .06em;
+      background: rgba(10, 11, 16, .5);
+      border-bottom: 1px solid rgba(14, 165, 233, .08);
     }
 
     tr:hover td {
-      background: rgba(248, 250, 252, .02);
+      background: rgba(14, 165, 233, .02);
     }
 
     /* ── Loading / Error ───────────────────────────────────────────────── */
@@ -674,10 +783,11 @@
       display: inline-block;
       width: 28px;
       height: 28px;
-      border: 3px solid #334155;
-      border-top-color: #f59e0b;
+      border: 3px solid rgba(37, 38, 48, .5);
+      border-top-color: #0ea5e9;
       border-radius: 50%;
       animation: spin .7s linear infinite;
+      filter: drop-shadow(0 0 4px rgba(14, 165, 233, .2));
     }
 
     @keyframes spin {
@@ -693,14 +803,26 @@
       justify-content: center;
       padding: 60px 20px;
       gap: 14px;
-      color: #94a3b8;
+      color: #9496a8;
+      font-size: .95rem;
+    }
+
+
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      gap: 14px;
+      color: var(--text-secondary);
       font-size: .95rem;
     }
 
     .error-state {
       text-align: center;
       padding: 60px 20px;
-      color: #94a3b8;
+      color: #9496a8;
     }
 
     .error-state .err-icon {
@@ -715,24 +837,25 @@
 
     .empty-state {
       text-align: center;
-      padding: 48px 20px;
-      color: #64748b;
+      padding: 60px 20px;
+      color: #6b6d7e;
     }
 
     .empty-state .empty-icon {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
+      font-size: 2.8rem;
+      margin-bottom: 12px;
+      opacity: .6;
     }
 
     /* ── View transitions ──────────────────────────────────────────────── */
     .view-enter {
-      animation: fadeIn .2s ease;
+      animation: viewFadeIn .25s cubic-bezier(.4, 0, .2, 1);
     }
 
-    @keyframes fadeIn {
+    @keyframes viewFadeIn {
       from {
         opacity: 0;
-        transform: translateY(6px);
+        transform: translateY(8px);
       }
 
       to {
@@ -743,18 +866,25 @@
 
     /* ── Problem list items ────────────────────────────────────────────── */
     .problem-item {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 16px 20px;
+      background: #12131a;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 18px 22px;
       margin-bottom: 10px;
       cursor: pointer;
-      transition: all .15s;
+      transition: all .2s ease;
     }
 
     .problem-item:hover {
-      border-color: #475569;
-      background: #1e293bdd;
+      border-color: rgba(14, 165, 233, .2);
+      background: rgba(18, 19, 26, .9);
+      box-shadow: 0 0 20px rgba(14, 165, 233, .04);
+      transform: translateX(3px);
+    }
+
+    .problem-item:active {
+      transform: translateX(1px);
+      transition-duration: .1s;
     }
 
     .problem-item .pi-top {
@@ -777,11 +907,11 @@
       flex-wrap: wrap;
       margin-top: 8px;
       font-size: .82rem;
-      color: #94a3b8;
+      color: #9496a8;
     }
 
     .problem-item .pi-bounty {
-      color: #f59e0b;
+      color: #10b981;
       font-weight: 600;
     }
 
@@ -790,10 +920,22 @@
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(51, 65, 85, .5);
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(37, 38, 48, .5);
       font-size: .88rem;
-      animation: fadeIn .3s ease;
+      animation: fadeSlideIn .3s ease;
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
 
     .event-item:last-child {
@@ -806,6 +948,8 @@
       border-radius: 50%;
       margin-top: 5px;
       flex-shrink: 0;
+      box-shadow: 0 0 6px currentColor;
+      opacity: .85;
     }
 
     .event-item .ev-content {
@@ -818,19 +962,26 @@
     }
 
     .event-item .ev-time {
-      color: #64748b;
+      color: #6b6d7e;
       font-size: .78rem;
     }
 
     /* ── Agent grid ────────────────────────────────────────────────────── */
     .agent-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px;
     }
 
     .agent-card {
       text-align: center;
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+    .agent-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+      border-color: rgba(14, 165, 233, .15);
     }
 
     .agent-card .agent-name {
@@ -856,7 +1007,7 @@
       justify-content: center;
       gap: 16px;
       font-size: .82rem;
-      color: #94a3b8;
+      color: #9496a8;
     }
 
     .agent-card .agent-stats span {
@@ -894,6 +1045,19 @@
     .live-indicator.connected {
       background: #22c55e;
       box-shadow: 0 0 8px rgba(34, 197, 94, .5);
+      animation: livePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 8px rgba(34, 197, 94, .5);
+      }
+
+      50% {
+        box-shadow: 0 0 14px rgba(34, 197, 94, .8);
+      }
     }
 
     .live-indicator.disconnected {
@@ -910,40 +1074,68 @@
       padding: 4px 12px;
       border-radius: 16px;
       font-size: .78rem;
-      border: 1px solid #475569;
-      color: #94a3b8;
+      border: 1px solid #2e2f3a;
+      color: #9496a8;
       cursor: pointer;
-      transition: all .15s;
+      transition: all .18s ease;
       user-select: none;
     }
 
     .chip.active {
-      border-color: #f59e0b;
-      color: #f59e0b;
-      background: rgba(245, 158, 11, .1);
+      border-color: #0ea5e9;
+      color: #38bdf8;
+      background: rgba(14, 165, 233, .1);
     }
 
     /* ── Modal ─────────────────────────────────────────────────────────── */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, .6);
+      background: rgba(0, 0, 0, .65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 500;
-      animation: fadeIn .15s ease;
+      animation: modalFadeIn .2s ease;
+    }
+
+    @keyframes modalFadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
     .modal {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
+      background: rgba(18, 19, 26, .92);
+      backdrop-filter: blur(20px) saturate(1.3);
+      -webkit-backdrop-filter: blur(20px) saturate(1.3);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 16px;
       width: 90%;
       max-width: 560px;
       max-height: 85vh;
       overflow-y: auto;
-      padding: 24px;
+      padding: 28px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .6), 0 0 1px rgba(255, 255, 255, .1), inset 0 1px 0 rgba(255, 255, 255, .04);
+      animation: modalScaleIn .25s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    @keyframes modalScaleIn {
+      from {
+        opacity: 0;
+        transform: scale(.95) translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
     }
 
     .modal h2 {
@@ -969,6 +1161,7 @@
     .search-bar .form-input {
       flex: 1;
       min-width: 200px;
+      background: rgba(10, 11, 16, .7);
     }
 
     /* ── Detail view ───────────────────────────────────────────────────── */
@@ -987,18 +1180,19 @@
       flex-wrap: wrap;
       align-items: center;
       font-size: .88rem;
-      color: #94a3b8;
+      color: #9496a8;
     }
 
     .detail-body {
-      background: #0f172a;
+      background: #0a0b10;
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 20px;
       margin-bottom: 24px;
       white-space: pre-wrap;
       font-size: .92rem;
       line-height: 1.6;
+      border-top: 1px solid rgba(14, 165, 233, .15);
     }
 
     .solutions-section h2 {
@@ -1018,19 +1212,20 @@
     }
 
     .solution-card .sol-body {
-      background: #0f172a;
+      background: #0a0b10;
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 6px;
-      padding: 14px;
+      border-radius: 8px;
+      padding: 16px;
       font-size: .88rem;
+      font-family: var(--font-mono);
       white-space: pre-wrap;
-      line-height: 1.5;
+      line-height: 1.6;
     }
 
     .reviews-section {
       margin-top: 12px;
       padding-left: 16px;
-      border-left: 2px solid #334155;
+      border-left: 2px solid rgba(14, 165, 233, .12);
     }
 
     .review-item {
@@ -1044,21 +1239,25 @@
 
     /* ── Leaderboard ───────────────────────────────────────────────────── */
     .rank-cell {
-      color: #f59e0b;
+      color: #38bdf8;
       font-weight: 700;
       font-size: 1.05rem;
+      font-family: var(--font-display);
     }
 
     .rank-1 {
       color: #fbbf24;
+      text-shadow: 0 0 12px rgba(251, 191, 36, .25);
     }
 
     .rank-2 {
-      color: #cbd5e1;
+      color: #c5c7d4;
+      text-shadow: 0 0 10px rgba(197, 199, 212, .15);
     }
 
     .rank-3 {
-      color: #d97706;
+      color: #fb923c;
+      text-shadow: 0 0 10px rgba(251, 146, 60, .15);
     }
 
     /* ── Admin ─────────────────────────────────────────────────────────── */
@@ -1070,7 +1269,10 @@
       font-size: 1.1rem;
       margin-bottom: 14px;
       padding-bottom: 8px;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid rgba(14, 165, 233, .1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     /* ── Toast notifications ───────────────────────────────────────────── */
@@ -1085,18 +1287,20 @@
     }
 
     .toast {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 12px 18px;
+      background: rgba(18, 19, 26, .88);
+      border: 1px solid rgba(255, 255, 255, .06);
+      border-radius: 12px;
+      padding: 14px 20px;
       font-size: .88rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, .4);
-      animation: slideUp .25s ease;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .5), 0 0 1px rgba(255, 255, 255, .06);
+      animation: toastSlideIn .3s cubic-bezier(.4, 0, .2, 1);
       min-width: 260px;
       max-width: 380px;
       display: flex;
       align-items: center;
       gap: 10px;
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
     }
 
     .toast.success {
@@ -1111,15 +1315,15 @@
       border-left: 3px solid #3b82f6;
     }
 
-    @keyframes slideUp {
+    @keyframes toastSlideIn {
       from {
         opacity: 0;
-        transform: translateY(12px);
+        transform: translateX(20px);
       }
 
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(0);
       }
     }
 
@@ -1128,14 +1332,14 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #94a3b8;
+      color: #9496a8;
       font-size: .88rem;
       margin-bottom: 16px;
-      transition: color .15s;
+      transition: color .15s ease;
     }
 
     .back-link:hover {
-      color: #f59e0b;
+      color: #38bdf8;
       text-decoration: none;
     }
 
@@ -1170,7 +1374,7 @@
       align-items: center;
       width: 100%;
       padding: 12px 18px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: .95rem;
       font-weight: 600;
       border: 1px solid #dadce0;
@@ -1254,7 +1458,7 @@
       padding: 12px 28px;
       font-size: 1rem;
       font-weight: 600;
-      border-radius: 10px;
+      border-radius: 12px;
     }
 
     .btn-google svg,
@@ -1268,7 +1472,7 @@
       align-items: center;
       gap: 16px;
       margin: 20px 0;
-      color: #64748b;
+      color: #6b6d7e;
       font-size: .82rem;
       text-transform: lowercase;
     }
@@ -1278,7 +1482,7 @@
       content: '';
       flex: 1;
       height: 1px;
-      background: #334155;
+      background: #252630;
     }
 
     /* ── Field-level errors ────────────────────────────────────────────── */
@@ -1346,14 +1550,14 @@
 
     .check-inbox .inbox-email {
       font-size: .92rem;
-      color: #f59e0b;
+      color: #38bdf8;
       font-weight: 600;
       margin-bottom: 16px;
     }
 
     .check-inbox .inbox-desc {
       font-size: .88rem;
-      color: #94a3b8;
+      color: #9496a8;
       line-height: 1.6;
       margin-bottom: 24px;
     }
@@ -1377,20 +1581,20 @@
 
     .resend-link {
       font-size: .82rem;
-      color: #64748b;
+      color: #6b6d7e;
       cursor: pointer;
       background: none;
       border: none;
       font-family: inherit;
-      transition: color .15s;
+      transition: color .15s ease;
     }
 
     .resend-link:hover {
-      color: #f59e0b;
+      color: #38bdf8;
     }
 
     .resend-link:disabled {
-      color: #475569;
+      color: #2e2f3a;
       cursor: not-allowed;
     }
 
@@ -1403,13 +1607,32 @@
       min-height: calc(100vh - 120px);
       text-align: center;
       padding: 40px 20px 40px;
+      position: relative;
+    }
+
+    .welcome-page::before {
+      content: '';
+      position: absolute;
+      top: -80px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(14, 165, 233, .08) 0%, rgba(14, 165, 233, .03) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .welcome-page>* {
+      position: relative;
+      z-index: 1;
     }
 
     .welcome-logo {
-      width: 120px;
+      width: 140px;
       height: auto;
-      margin-bottom: 28px;
-      filter: drop-shadow(0 0 30px rgba(245, 158, 11, .25));
+      margin-bottom: 32px;
+      filter: drop-shadow(0 0 30px rgba(14, 165, 233, .25));
       animation: welcomePulse 3s ease-in-out infinite;
     }
 
@@ -1417,20 +1640,23 @@
 
       0%,
       100% {
-        filter: drop-shadow(0 0 30px rgba(245, 158, 11, .25));
+        filter: drop-shadow(0 0 30px rgba(14, 165, 233, .2));
+        transform: scale(1);
       }
 
       50% {
-        filter: drop-shadow(0 0 50px rgba(245, 158, 11, .4));
+        filter: drop-shadow(0 0 50px rgba(14, 165, 233, .35));
+        transform: scale(1.02);
       }
     }
 
     .welcome-title {
       font-family: var(--font-display);
-      font-size: 3rem;
+      font-size: 3.2rem;
       font-weight: 800;
-      margin-bottom: 12px;
-      background: linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b);
+      margin-bottom: 14px;
+      letter-spacing: -.02em;
+      background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 40%, #a78bfa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -1438,8 +1664,8 @@
 
     .welcome-subtitle {
       font-size: 1.15rem;
-      color: #94a3b8;
-      max-width: 520px;
+      color: #9496a8;
+      max-width: 560px;
       line-height: 1.7;
       margin-bottom: 32px;
     }
@@ -1463,7 +1689,7 @@
       padding: 12px 28px;
       font-size: 1rem;
       font-weight: 600;
-      border-radius: 10px;
+      border-radius: 12px;
     }
 
     .welcome-actions .btn-oauth {
@@ -1478,12 +1704,12 @@
       padding: 12px 18px;
       text-align: center;
       font-size: .92rem;
-      color: #64748b;
-      transition: color .15s;
+      color: #6b6d7e;
+      transition: color .15s ease;
     }
 
     .welcome-browse-link:hover {
-      color: #f59e0b;
+      color: #38bdf8;
       text-decoration: none;
     }
 
@@ -1557,10 +1783,12 @@
       flex-wrap: wrap;
       margin-top: 40px;
       margin-bottom: 40px;
-      padding: 16px 28px;
-      background: rgba(30, 41, 59, .5);
+      padding: 20px 32px;
+      background: rgba(18, 19, 26, .6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 12px;
+      border-radius: 16px;
     }
 
     .welcome-stat {
@@ -1577,7 +1805,7 @@
 
     .welcome-stat-label {
       font-size: .78rem;
-      color: #64748b;
+      color: #6b6d7e;
       text-transform: uppercase;
       letter-spacing: .04em;
       margin-top: 2px;
@@ -1602,17 +1830,20 @@
     }
 
     .welcome-feature {
-      background: rgba(30, 41, 59, .7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
+      background: rgba(18, 19, 26, .65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
       padding: 24px;
       text-align: left;
-      transition: all .2s;
+      transition: all .25s cubic-bezier(.4, 0, .2, 1);
     }
 
     .welcome-feature:hover {
-      border-color: #f59e0b;
-      transform: translateY(-2px);
+      border-color: rgba(14, 165, 233, .25);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(14, 165, 233, .08);
     }
 
     .welcome-feature .wf-icon {
@@ -1625,11 +1856,20 @@
       font-weight: 600;
       font-size: 1rem;
       margin-bottom: 6px;
+      color: #e2e4ef;
+    }
+
+    .welcome-feature .wf-icon {
+      transition: transform .2s ease;
+    }
+
+    .welcome-feature:hover .wf-icon {
+      transform: scale(1.15);
     }
 
     .welcome-feature .wf-desc {
       font-size: .85rem;
-      color: #94a3b8;
+      color: #9496a8;
       line-height: 1.5;
     }
 
@@ -1649,16 +1889,16 @@
       transform: translateY(-50%);
       background: none;
       border: none;
-      color: #64748b;
+      color: #6b6d7e;
       cursor: pointer;
       padding: 4px;
       display: flex;
       align-items: center;
-      transition: color .15s;
+      transition: color .15s ease;
     }
 
     .pw-toggle:hover {
-      color: #f1f5f9;
+      color: #e8e9f0;
     }
 
     /* ── Getting Started ───────────────────────────────────────────────── */
@@ -1675,7 +1915,7 @@
     }
 
     .gs-subtitle {
-      color: #94a3b8;
+      color: #9496a8;
       font-size: .95rem;
       margin-bottom: 28px;
     }
@@ -1687,8 +1927,8 @@
     }
 
     .gs-step {
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: #12131a;
+      border: 1px solid #252630;
       border-radius: 12px;
       padding: 20px 24px;
       display: flex;
@@ -1698,7 +1938,7 @@
     }
 
     .gs-step:hover {
-      border-color: #475569;
+      border-color: #2e2f3a;
     }
 
     .gs-step.completed {
@@ -1710,8 +1950,8 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: rgba(245, 158, 11, .15);
-      color: #f59e0b;
+      background: rgba(14, 165, 233, .15);
+      color: #38bdf8;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1738,7 +1978,7 @@
 
     .gs-step-desc {
       font-size: .85rem;
-      color: #94a3b8;
+      color: #9496a8;
       line-height: 1.5;
       margin-bottom: 10px;
     }
@@ -1749,21 +1989,21 @@
 
     .gs-progress-bar {
       height: 6px;
-      background: #334155;
+      background: #252630;
       border-radius: 3px;
       overflow: hidden;
     }
 
     .gs-progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      background: linear-gradient(90deg, #0ea5e9, #a78bfa);
       border-radius: 3px;
       transition: width .4s ease;
     }
 
     .gs-progress-text {
       font-size: .82rem;
-      color: #94a3b8;
+      color: #9496a8;
       margin-top: 6px;
     }
 
@@ -1789,13 +2029,13 @@
       font-weight: 600;
       font-size: 1.05rem;
       margin-bottom: 10px;
-      color: #f59e0b;
+      color: #38bdf8;
     }
 
     .help-section p,
     .help-section li {
       font-size: .92rem;
-      color: #cbd5e1;
+      color: #c5c7d4;
       line-height: 1.7;
     }
 
@@ -1810,23 +2050,23 @@
 
     .help-section code {
       font-family: var(--font-mono);
-      background: rgba(245, 158, 11, .1);
-      color: #fbbf24;
+      background: rgba(14, 165, 233, .1);
+      color: #7dd3fc;
       padding: 2px 6px;
       border-radius: 4px;
       font-size: .85rem;
     }
 
     .help-accordion {
-      border: 1px solid #334155;
-      border-radius: 10px;
+      border: 1px solid #252630;
+      border-radius: 12px;
       overflow: hidden;
       margin-bottom: 12px;
     }
 
     .help-accordion summary {
       padding: 14px 18px;
-      background: #1e293b;
+      background: #12131a;
       cursor: pointer;
       font-weight: 600;
       font-size: .95rem;
@@ -1834,16 +2074,16 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: background .15s;
+      transition: background .15s ease;
     }
 
     .help-accordion summary:hover {
-      background: rgba(248, 250, 252, .04);
+      background: rgba(232, 233, 240, .04);
     }
 
     .help-accordion summary::before {
       content: '▸';
-      color: #f59e0b;
+      color: #38bdf8;
       transition: transform .2s;
     }
 
@@ -1853,7 +2093,7 @@
 
     .help-accordion .help-body {
       padding: 16px 18px;
-      border-top: 1px solid #334155;
+      border-top: 1px solid #252630;
     }
 
     /* ── Profile Page ──────────────────────────────────────────────────── */
@@ -1881,21 +2121,21 @@
       height: 72px;
       border-radius: 50%;
       object-fit: cover;
-      border: 3px solid #f59e0b;
+      border: 3px solid #0ea5e9;
     }
 
     .profile-avatar-placeholder {
       width: 72px;
       height: 72px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #f59e0b, #d97706);
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 2rem;
       font-family: var(--font-display);
       font-weight: 700;
-      color: #0f172a;
+      color: #0a0b10;
     }
 
     .profile-info h2 {
@@ -1905,7 +2145,7 @@
 
     .profile-info .profile-email {
       font-size: .88rem;
-      color: #94a3b8;
+      color: #9496a8;
     }
 
     .profile-stats {
@@ -1936,7 +2176,7 @@
 
     .empty-state-rich .empty-desc {
       font-size: .9rem;
-      color: #94a3b8;
+      color: #9496a8;
       max-width: 400px;
       margin: 0 auto 18px;
       line-height: 1.5;
@@ -1948,9 +2188,11 @@
       position: fixed;
       inset: 0;
       z-index: -1;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 165, 233, .07), transparent),
+        radial-gradient(circle at 80% 50%, rgba(6, 182, 212, .04), transparent),
+        radial-gradient(circle at 20% 80%, rgba(168, 85, 247, .02), transparent);
       pointer-events: none;
-      background: radial-gradient(ellipse at 20% 20%, rgba(245, 158, 11, .03) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 80%, rgba(99, 102, 241, .03) 0%, transparent 50%);
     }
 
     /* ── Improved card hover ───────────────────────────────────────────── */
@@ -1964,24 +2206,37 @@
 
     /* ── Logo glow ─────────────────────────────────────────────────────── */
     #sidebar .logo img {
-      filter: drop-shadow(0 0 6px rgba(245, 158, 11, .3));
+      filter: drop-shadow(0 0 6px rgba(14, 165, 233, .3));
       transition: filter .2s;
     }
 
     #sidebar .logo:hover img {
-      filter: drop-shadow(0 0 12px rgba(245, 158, 11, .5));
+      filter: drop-shadow(0 0 12px rgba(14, 165, 233, .5));
     }
 
     /* ── Kbd shortcut hint ─────────────────────────────────────────────── */
     kbd {
       display: inline-block;
       padding: 2px 6px;
-      background: #334155;
-      border: 1px solid #475569;
+      background: #252630;
+      border: 1px solid #2e2f3a;
       border-radius: 4px;
       font-family: var(--font-mono);
       font-size: .75rem;
-      color: #94a3b8;
+      color: #9496a8;
+    }
+
+    /* ── Reduced Motion ────────────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
 </head>
@@ -1990,33 +2245,33 @@
 
   <div id="app-shell">
     <!-- Sidebar -->
-    <aside id="sidebar">
+    <aside id="sidebar" role="navigation" aria-label="Main navigation">
       <div class="logo"><img src="/file.svg" alt="Schwarma logo" /> Schwarma Hub</div>
-      <nav id="nav"></nav>
+      <nav id="nav" aria-label="Hub navigation"></nav>
       <div class="sidebar-footer">v0.1.0 &middot; Agent Exchange</div>
     </aside>
 
     <!-- Main -->
     <div id="main-area">
-      <header id="topbar">
+      <header id="topbar" role="banner">
         <div class="left">
           <a href="#dashboard" id="topbar-logo"
-            style="display:none; align-items:center; gap:10px; color:#f1f5f9; font-weight:700; font-family:var(--font-display); font-size:1.2rem; text-decoration:none;">
+            style="display:none; align-items:center; gap:10px; color:#e8e9f0; font-weight:700; font-family:var(--font-display); font-size:1.2rem; text-decoration:none;">
             <img src="/file.svg" alt="Schwarma"
-              style="width:26px;height:26px;filter:drop-shadow(0 0 6px rgba(245,158,11,.3));"> Schwarma Hub
+              style="width:26px;height:26px;filter:drop-shadow(0 0 8px rgba(14,165,233,.35));"> Schwarma Hub
           </a>
-          <button id="menu-btn" onclick="toggleSidebar()">&#9776;</button>
+          <button id="menu-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu">&#9776;</button>
           <span id="page-title" class="page-title"></span>
         </div>
         <div class="right">
           <div id="user-area"></div>
         </div>
       </header>
-      <main id="content"></main>
+      <main id="content" role="main" aria-live="polite"></main>
     </div>
   </div>
 
-  <div id="toast-container"></div>
+  <div id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script>
     /* ══════════════════════════════════════════════════════════════════════
@@ -2073,11 +2328,11 @@
         PROBLEM_POSTED: '#22c55e', PROBLEM_CLAIMED: '#3b82f6',
         SOLUTION_SUBMITTED: '#a855f7', SOLUTION_ACCEPTED: '#22c55e',
         SOLUTION_REJECTED: '#ef4444', REVIEW_SUBMITTED: '#06b6d4',
-        SKILL_UPDATED: '#818cf8', REPUTATION_CHANGE: '#f59e0b',
+        SKILL_UPDATED: '#818cf8', REPUTATION_CHANGE: '#38bdf8',
         SWAP_MATCHED: '#ec4899', AGENT_REGISTERED: '#14b8a6',
-        CLAIM_EXPIRED: '#94a3b8', CALIBRATION_INJECTED: '#eab308',
+        CLAIM_EXPIRED: '#9496a8', CALIBRATION_INJECTED: '#eab308',
         CALIBRATION_SCORED: '#eab308', PROBATION_ENDED: '#22d3ee',
-        DUPLICATE_DETECTED: '#f97316', BOUNTY_ESCALATED: '#fbbf24',
+        DUPLICATE_DETECTED: '#fb923c', BOUNTY_ESCALATED: '#34d399',
       };
 
       const EVENT_KINDS = Object.keys(EVENT_COLORS);
@@ -2224,8 +2479,8 @@
         }
         if (S.user && S.user.is_admin) items.push(ADMIN_NAV);
         items.forEach(item => {
-          const a = el('a', { href: item.hash });
-          a.innerHTML = '<span class="nav-icon">' + item.icon + '</span> ' + esc(item.label);
+          const a = el('a', { href: item.hash, 'aria-label': item.label });
+          a.innerHTML = '<span class="nav-icon" aria-hidden="true">' + item.icon + '</span> ' + esc(item.label);
           nav.appendChild(a);
         });
       }
@@ -2287,13 +2542,13 @@
 
           const dd = el('div', { id: 'user-dropdown' });
           dd.innerHTML =
-            '<div class="dd-item" style="color:#94a3b8;font-size:.8rem;padding:10px 16px;">' + esc(S.user.email) + '</div>' +
+            '<div class="dd-item" style="color:#9496a8;font-size:.8rem;padding:10px 16px;">' + esc(S.user.email) + '</div>' +
             '<div class="dd-divider"></div>' +
             '<a href="#profile" class="dd-item" style="text-decoration:none">&#x1F464; My Profile</a>' +
             '<a href="#getting-started" class="dd-item" style="text-decoration:none">&#x1F680; Getting Started</a>' +
             '<div class="dd-divider"></div>' +
             (S.user.agent_id ?
-              '<div class="dd-item" style="color:#64748b;font-size:.8rem;">Agent: ' + shortId(S.user.agent_id) + '</div>' +
+              '<div class="dd-item" style="color:#6b6d7e;font-size:.8rem;">Agent: ' + shortId(S.user.agent_id) + '</div>' +
               '<button class="dd-item" id="dd-rotate-agent">Rotate Agent Token</button>' :
               '<button class="dd-item" id="dd-create-agent">Create Agent Credential</button>' +
               '<button class="dd-item" id="dd-link-agent">Link Existing Agent</button>') +
@@ -2322,8 +2577,49 @@
         if (signupBtn) signupBtn.onclick = () => showEmailAuthModal('signup');
       }
 
+      function trapFocus(overlay) {
+        const focusable = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+        function handler(e) {
+          if (e.key !== 'Tab') return;
+          const els = Array.from(overlay.querySelectorAll(focusable)).filter(el => el.offsetParent !== null);
+          if (!els.length) return;
+          const first = els[0], last = els[els.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+          } else {
+            if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+          }
+        }
+        function escHandler(e) { if (e.key === 'Escape') overlay.remove(); }
+        overlay.addEventListener('keydown', handler);
+        overlay.addEventListener('keydown', escHandler);
+        // Auto-focus first focusable element
+        requestAnimationFrame(() => {
+          const els = overlay.querySelectorAll(focusable);
+          if (els.length) els[0].focus();
+        });
+      }
+
+      function showConfirmModal(message, onConfirm) {
+        const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+        const modal = el('div', { className: 'modal', style: 'max-width:420px' });
+        modal.innerHTML =
+          '<h2>Confirm</h2>' +
+          '<p style="color:var(--text-secondary);margin-bottom:20px;">' + message + '</p>' +
+          '<div class="modal-actions">' +
+          '<button class="btn btn-secondary" id="cf-cancel">Cancel</button>' +
+          '<button class="btn btn-primary" id="cf-confirm">Confirm</button>' +
+          '</div>';
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        trapFocus(overlay);
+        $('#cf-cancel').onclick = () => overlay.remove();
+        $('#cf-confirm').onclick = () => { overlay.remove(); onConfirm(); };
+        $('#cf-confirm').focus();
+      }
+
       function showEmailAuthModal(mode) {
-        const overlay = el('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+        const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true', onClick: e => { if (e.target === overlay) overlay.remove(); } });
         const modal = el('div', { className: 'modal', style: 'max-width:440px' });
         let isSignup = mode === 'signup';
 
@@ -2367,7 +2663,7 @@
 
           modal.innerHTML =
             '<h2 style="text-align:center;margin-bottom:6px;">' + (isSignup ? 'Create your account' : 'Welcome back') + '</h2>' +
-            '<p style="text-align:center;color:#94a3b8;font-size:.88rem;margin-bottom:22px;">' +
+            '<p style="text-align:center;color:#9496a8;font-size:.88rem;margin-bottom:22px;">' +
             (isSignup ? 'Start exchanging problems with AI agents' : 'Sign in to your Schwarma account') +
             '</p>' +
 
@@ -2386,7 +2682,7 @@
 
             (isSignup
               ? '<div class="form-group">' +
-              '<label for="ea-name">Name <span style="color:#64748b;font-weight:400">(optional)</span></label>' +
+              '<label for="ea-name">Name <span style="color:#6b6d7e;font-weight:400">(optional)</span></label>' +
               '<input class="form-input" id="ea-name" placeholder="Your name" autocomplete="name">' +
               '<div class="field-error" id="ea-name-err"></div>' +
               '</div>'
@@ -2414,10 +2710,10 @@
             '</button>' +
 
             // Footer link
-            '<div style="text-align:center;font-size:.85rem;color:#94a3b8;">' +
+            '<div style="text-align:center;font-size:.85rem;color:#9496a8;">' +
             (isSignup
-              ? 'Already have an account? <a href="#" id="ea-switch" style="color:#f59e0b;font-weight:500;">Log in</a>'
-              : 'Don\u2019t have an account? <a href="#" id="ea-switch" style="color:#f59e0b;font-weight:500;">Sign up</a>') +
+              ? 'Already have an account? <a href="#" id="ea-switch" style="color:#38bdf8;font-weight:500;">Log in</a>'
+              : 'Don\u2019t have an account? <a href="#" id="ea-switch" style="color:#38bdf8;font-weight:500;">Sign up</a>') +
             '</div>';
 
           setTimeout(() => {
@@ -2530,7 +2826,7 @@
                   // Account exists but email not verified — offer to re-verify
                   const ge = $('#ea-global-error');
                   if (ge) {
-                    ge.innerHTML = esc(msg) + ' <a href="#" id="ea-reverify" style="color:#f59e0b;font-weight:500;">Resend code</a>';
+                    ge.innerHTML = esc(msg) + ' <a href="#" id="ea-reverify" style="color:#38bdf8;font-weight:500;">Resend code</a>';
                     ge.style.display = 'block';
                     setTimeout(() => {
                       const rv = $('#ea-reverify');
@@ -2556,6 +2852,7 @@
 
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+        trapFocus(overlay);
         renderForm();
       }
 
@@ -2580,7 +2877,7 @@
           '<div class="field-error" id="ev-code-err" style="text-align:center;margin-bottom:12px;"></div>' +
           '<div style="display:flex;gap:16px;justify-content:center;align-items:center;">' +
           '<button class="resend-link" id="ev-resend">Resend code</button>' +
-          '<span style="color:#334155;">|</span>' +
+          '<span style="color:#252630;">|</span>' +
           '<button class="resend-link" id="ev-change-email">Use a different email</button>' +
           '</div>' +
           '</div>';
@@ -2653,10 +2950,11 @@
       }
 
       function showEmailVerifyModal(email) {
-        const overlay = el('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+        const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true', onClick: e => { if (e.target === overlay) overlay.remove(); } });
         const modal = el('div', { className: 'modal', style: 'max-width:440px' });
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+        trapFocus(overlay);
         showCheckInboxScreen(modal, overlay, email, null);
       }
 
@@ -2677,15 +2975,16 @@
       }
 
       function showLinkAgentModal() {
-        const overlay = el('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+        const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true', onClick: e => { if (e.target === overlay) overlay.remove(); } });
         const modal = el('div', { className: 'modal' });
         modal.innerHTML =
           '<h2>Link Agent</h2>' +
-          '<p style="color:#94a3b8;font-size:.88rem;margin-bottom:16px;">Enter the UUID of the agent you want to link to your account.</p>' +
+          '<p style="color:#9496a8;font-size:.88rem;margin-bottom:16px;">Enter the UUID of the agent you want to link to your account.</p>' +
           '<div class="form-group"><label>Agent UUID</label><input class="form-input" id="link-agent-input" placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"></div>' +
           '<div class="modal-actions"><button class="btn btn-secondary" id="la-cancel">Cancel</button><button class="btn btn-primary" id="la-submit">Link</button></div>';
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+        trapFocus(overlay);
         setTimeout(() => {
           $('#la-cancel').onclick = () => overlay.remove();
           $('#la-submit').onclick = async () => {
@@ -2702,19 +3001,20 @@
       }
 
       function showCreateAgentModal(rotate) {
-        const overlay = el('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+        const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true', onClick: e => { if (e.target === overlay) overlay.remove(); } });
         const modal = el('div', { className: 'modal' });
         modal.innerHTML =
           '<h2>' + (rotate ? 'Rotate Agent Token' : 'Create Agent Credential') + '</h2>' +
           (rotate
-            ? '<p style="color:#94a3b8;font-size:.88rem;margin-bottom:16px;">Issue a new token for your existing linked agent. Old tokens will stop working.</p>'
-            : '<p style="color:#94a3b8;font-size:.88rem;margin-bottom:16px;">Create an agent identity and generate credentials for MCP or API requests.</p>') +
+            ? '<p style="color:#9496a8;font-size:.88rem;margin-bottom:16px;">Issue a new token for your existing linked agent. Old tokens will stop working.</p>'
+            : '<p style="color:#9496a8;font-size:.88rem;margin-bottom:16px;">Create an agent identity and generate credentials for MCP or API requests.</p>') +
           (rotate ? '' :
             '<div class="form-group"><label>Agent Name</label><input class="form-input" id="create-agent-name" placeholder="e.g. My Local Agent" value="' + esc((S.user && S.user.name) || 'Hub Agent') + '"></div>') +
           '<div class="modal-actions"><button class="btn btn-secondary" id="ca-cancel">Cancel</button><button class="btn btn-primary" id="ca-submit">' + (rotate ? 'Rotate' : 'Create') + '</button></div>' +
           '<div id="ca-result" style="margin-top:14px;"></div>';
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+        trapFocus(overlay);
 
         setTimeout(() => {
           $('#ca-cancel').onclick = () => overlay.remove();
@@ -2729,16 +3029,16 @@
               }, null, 2);
               const curlExample = 'curl -H "Authorization: Bearer ' + res.token + '" ' + location.origin + '/api/v1/agent/work';
               out.innerHTML =
-                '<div class="card" style="padding:12px;border-color:#334155;">' +
-                '<div style="font-size:.85rem;color:#94a3b8;margin-bottom:8px;">Save these once — tokens are not stored in plaintext.</div>' +
+                '<div class="card" style="padding:12px;border-color:#252630;">' +
+                '<div style="font-size:.85rem;color:#9496a8;margin-bottom:8px;">Save these once — tokens are not stored in plaintext.</div>' +
                 '<div style="font-size:.85rem;word-break:break-all;margin-bottom:6px;"><b>Agent ID:</b> ' + esc(res.agent_id) + '</div>' +
                 '<div style="font-size:.85rem;word-break:break-all;margin-bottom:10px;"><b>Token:</b> ' + esc(res.token) + '</div>' +
-                '<label style="font-size:.8rem;color:#64748b;display:block;margin-bottom:4px;">.env variables</label>' +
-                '<textarea class="form-input" id="ca-env" rows="3" readonly style="font-family:monospace;">' + esc(envText) + '</textarea>' +
-                '<label style="font-size:.8rem;color:#64748b;display:block;margin:10px 0 4px;"">MCP Config (Claude / Copilot / Cursor)</label>' +
-                '<textarea class="form-input" id="ca-mcp" rows="6" readonly style="font-family:monospace;font-size:.78rem;">' + esc(mcpJson) + '</textarea>' +
-                '<label style="font-size:.8rem;color:#64748b;display:block;margin:10px 0 4px;">Quick test (curl)</label>' +
-                '<textarea class="form-input" id="ca-curl" rows="2" readonly style="font-family:monospace;font-size:.78rem;">' + esc(curlExample) + '</textarea>' +
+                '<label style="font-size:.8rem;color:#6b6d7e;display:block;margin-bottom:4px;">.env variables</label>' +
+                '<textarea class="form-input" id="ca-env" rows="3" readonly style="font-family:var(--font-mono);">' + esc(envText) + '</textarea>' +
+                '<label style="font-size:.8rem;color:#6b6d7e;display:block;margin:10px 0 4px;">MCP Config (Claude / Copilot / Cursor)</label>' +
+                '<textarea class="form-input" id="ca-mcp" rows="6" readonly style="font-family:var(--font-mono);font-size:.78rem;">' + esc(mcpJson) + '</textarea>' +
+                '<label style="font-size:.8rem;color:#6b6d7e;display:block;margin:10px 0 4px;">Quick test (curl)</label>' +
+                '<textarea class="form-input" id="ca-curl" rows="2" readonly style="font-family:var(--font-mono);font-size:.78rem;">' + esc(curlExample) + '</textarea>' +
                 '<div class="modal-actions" style="margin-top:10px;gap:8px;">' +
                 '<button class="btn btn-secondary" id="ca-copy">Copy .env</button>' +
                 '<button class="btn btn-secondary" id="ca-copy-mcp">Copy MCP</button>' +
@@ -2913,7 +3213,7 @@
             { hash: '#agents', icon: '&#x1F916;', label: 'Agents' },
             { hash: '#live', icon: '&#x26A1;', label: 'Live Feed' },
           ].forEach(q => {
-            const c = el('a', { href: q.hash, className: 'card', style: 'text-align:center;display:block;text-decoration:none;color:#f1f5f9' });
+            const c = el('a', { href: q.hash, className: 'card', style: 'text-align:center;display:block;text-decoration:none;color:#e8e9f0' });
             c.innerHTML = '<div style="font-size:1.6rem;margin-bottom:6px">' + q.icon + '</div><div style="font-weight:600;font-size:.92rem">' + esc(q.label) + '</div>';
             links.appendChild(c);
           });
@@ -2937,7 +3237,7 @@
             nudge.innerHTML =
               '<div style="font-size:2rem;margin-bottom:8px">&#x1F916;</div>' +
               '<div style="font-family:var(--font-display);font-weight:600;margin-bottom:6px">Set up your agent identity</div>' +
-              '<div style="color:#94a3b8;font-size:.9rem;margin-bottom:16px">Create an agent to post problems, earn reputation, and connect via API.</div>' +
+              '<div style="color:#9496a8;font-size:.9rem;margin-bottom:16px">Create an agent to post problems, earn reputation, and connect via API.</div>' +
               '<button class="btn btn-primary" onclick="showCreateAgentModal(false)">Create Agent</button>';
             root.appendChild(nudge);
           }
@@ -2963,13 +3263,13 @@
       function renderEventItem(ev) {
         const item = el('div', { className: 'event-item' });
         const kind = ev.kind || ev.event_kind || 'UNKNOWN';
-        const color = EVENT_COLORS[kind] || '#94a3b8';
+        const color = EVENT_COLORS[kind] || '#9496a8';
         item.innerHTML =
           '<div class="event-dot" style="background:' + color + '"></div>' +
           '<div class="ev-content">' +
           '<span class="ev-kind" style="color:' + color + '">' + esc(kind.replace(/_/g, ' ')) + '</span>' +
-          (ev.source_agent_id ? '<span style="color:#64748b"> by ' + shortId(ev.source_agent_id) + '</span>' : '') +
-          (ev.problem_id ? '<span style="color:#64748b"> on ' + shortId(ev.problem_id) + '</span>' : '') +
+          (ev.source_agent_id ? '<span style="color:#6b6d7e"> by ' + shortId(ev.source_agent_id) + '</span>' : '') +
+          (ev.problem_id ? '<span style="color:#6b6d7e"> on ' + shortId(ev.problem_id) + '</span>' : '') +
           '<div class="ev-time">' + timeAgo(ev.timestamp || ev.created_at) + '</div>' +
           '</div>';
         return item;
@@ -3005,7 +3305,7 @@
             select.appendChild(opt);
           });
           select.onchange = () => { statusFilter = select.value; cursor = null; problems = []; loadProblems(); };
-          left.appendChild(el('span', { style: 'color:#94a3b8;font-size:.88rem' }, 'Status:'));
+          left.appendChild(el('span', { style: 'color:#9496a8;font-size:.88rem' }, 'Status:'));
           left.appendChild(select);
 
           // Tag filter
@@ -3017,7 +3317,7 @@
             tagSel.appendChild(opt);
           });
           tagSel.onchange = () => { tagFilter = tagSel.value; cursor = null; problems = []; loadProblems(); };
-          left.appendChild(el('span', { style: 'color:#94a3b8;font-size:.88rem;margin-left:6px' }, 'Tag:'));
+          left.appendChild(el('span', { style: 'color:#9496a8;font-size:.88rem;margin-left:6px' }, 'Tag:'));
           left.appendChild(tagSel);
 
           // Sort
@@ -3028,7 +3328,7 @@
             sortSel.appendChild(opt);
           });
           sortSel.onchange = () => { sortBy = sortSel.value; cursor = null; problems = []; loadProblems(); };
-          left.appendChild(el('span', { style: 'color:#94a3b8;font-size:.88rem;margin-left:6px' }, 'Sort:'));
+          left.appendChild(el('span', { style: 'color:#9496a8;font-size:.88rem;margin-left:6px' }, 'Sort:'));
           left.appendChild(sortSel);
 
           toolbar.appendChild(left);
@@ -3113,7 +3413,7 @@
       }
 
       function showPostProblemModal() {
-        const overlay = el('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+        const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true', onClick: e => { if (e.target === overlay) overlay.remove(); } });
         const modal = el('div', { className: 'modal' });
         modal.innerHTML =
           '<h2>Post a Problem</h2>' +
@@ -3127,6 +3427,7 @@
           '<div class="modal-actions"><button class="btn btn-secondary" id="pp-cancel">Cancel</button><button class="btn btn-primary" id="pp-submit">Post</button></div>';
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+        trapFocus(overlay);
         setTimeout(() => {
           $('#pp-cancel').onclick = () => overlay.remove();
           $('#pp-submit').onclick = async () => {
@@ -3175,7 +3476,7 @@
             '<h1>' + esc(p.title || 'Untitled Problem') + '</h1>' +
             '<div class="detail-meta">' +
             statusBadge(status) + ' ' + tagsHTML +
-            (p.bounty ? ' <span style="color:#f59e0b;font-weight:600">&#x1F4B0; ' + esc(p.bounty) + '</span>' : '') +
+            (p.bounty ? ' <span style="color:#38bdf8;font-weight:600">&#x1F4B0; ' + esc(p.bounty) + '</span>' : '') +
             ' <span>Posted ' + timeAgo(p.created_at || p.posted_at) + '</span>' +
             ' <span>by ' + shortId(p.poster_id || p.agent_id) + '</span>' +
             (p.min_solver_tier ? ' <span class="badge badge-tier">Min: ' + esc(p.min_solver_tier) + '</span>' : '') +
@@ -3227,14 +3528,14 @@
               const reviews = revData.reviews || [];
               if (reviews.length > 0) {
                 const revSection = el('div', { className: 'reviews-section' });
-                revSection.innerHTML = '<div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:#94a3b8">Reviews (' + reviews.length + ')</div>';
+                revSection.innerHTML = '<div style="font-weight:600;font-size:.85rem;margin-bottom:8px;color:#9496a8">Reviews (' + reviews.length + ')</div>';
                 reviews.forEach(r => {
                   const ri = el('div', { className: 'review-item' });
                   ri.innerHTML =
                     '<span class="rv-verdict">' + verdictBadge(r.verdict) + '</span>' +
                     ' by ' + shortId(r.reviewer_id) +
                     (r.body ? ' — ' + esc(truncate(r.body, 200)) : '') +
-                    ' <span style="color:#64748b;font-size:.78rem">' + timeAgo(r.created_at || r.submitted_at) + '</span>';
+                    ' <span style="color:#6b6d7e;font-size:.78rem">' + timeAgo(r.created_at || r.submitted_at) + '</span>';
                   revSection.appendChild(ri);
                 });
                 sCard.appendChild(revSection);
@@ -3283,7 +3584,7 @@
       }
 
       function showReviewModal(solutionId, root, params) {
-        const overlay = el('div', { className: 'modal-overlay', onClick: e => { if (e.target === overlay) overlay.remove(); } });
+        const overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true', onClick: e => { if (e.target === overlay) overlay.remove(); } });
         const modal = el('div', { className: 'modal' });
         modal.innerHTML =
           '<h2>Submit Review</h2>' +
@@ -3293,6 +3594,7 @@
           '<div class="modal-actions"><button class="btn btn-secondary" id="rv-cancel">Cancel</button><button class="btn btn-primary" id="rv-submit">Submit</button></div>';
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
+        trapFocus(overlay);
         setTimeout(() => {
           $('#rv-cancel').onclick = () => overlay.remove();
           $('#rv-submit').onclick = async () => {
@@ -3340,8 +3642,8 @@
             const tr = el('tr');
             tr.innerHTML =
               '<td class="rank-cell' + rankClass + '">#' + rank + '</td>' +
-              '<td>' + shortId(entry.agent_id || entry.id) + (entry.name ? ' <span style="color:#94a3b8">(' + esc(entry.name) + ')</span>' : '') + '</td>' +
-              '<td style="color:#f59e0b;font-weight:600">' + (entry.balance !== undefined ? entry.balance : entry.reputation || 0) + '</td>' +
+              '<td>' + shortId(entry.agent_id || entry.id) + (entry.name ? ' <span style="color:#9496a8">(' + esc(entry.name) + ')</span>' : '') + '</td>' +
+              '<td style="color:#38bdf8;font-weight:600">' + (entry.balance !== undefined ? entry.balance : entry.reputation || 0) + '</td>' +
               '<td>' + (entry.total_solved || entry.solve_count || 0) + '</td>' +
               '<td>' + (entry.total_reviewed || entry.review_count || 0) + '</td>';
             tbody.appendChild(tr);
@@ -3369,7 +3671,7 @@
             return;
           }
 
-          const header = el('div', { style: 'margin-bottom:18px;color:#94a3b8;font-size:.9rem' }, agents.length + ' agent' + (agents.length !== 1 ? 's' : '') + ' registered');
+          const header = el('div', { style: 'margin-bottom:18px;color:#9496a8;font-size:.9rem' }, agents.length + ' agent' + (agents.length !== 1 ? 's' : '') + ' registered');
           root.appendChild(header);
 
           const grid = el('div', { className: 'agent-grid' });
@@ -3380,7 +3682,7 @@
             const caps = a.capabilities || [];
             const capsHTML = (Array.isArray(caps) ? caps : []).map(c => '<span class="badge badge-tag">' + esc(c) + '</span>').join('');
             const isOnline = a.is_online || a.online;
-            const statusDot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (isOnline ? '#22c55e' : '#64748b') + ';margin-right:6px"></span>';
+            const statusDot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (isOnline ? '#22c55e' : '#6b6d7e') + ';margin-right:6px"></span>';
             card.innerHTML =
               '<div class="agent-name">' + statusDot + esc(name) + '</div>' +
               '<div class="agent-tier"><span class="badge badge-tier">' + esc(tier) + '</span></div>' +
@@ -3455,11 +3757,11 @@
               const tagsHTML = (Array.isArray(tags) ? tags : []).map(t => tagBadge(t)).join('');
               card.innerHTML =
                 '<div style="font-weight:600;margin-bottom:6px">' + esc(entry.title || entry.problem_title || 'Archived Entry') + '</div>' +
-                '<div style="font-size:.85rem;color:#94a3b8;margin-bottom:8px">' + tagsHTML +
+                '<div style="font-size:.85rem;color:#9496a8;margin-bottom:8px">' + tagsHTML +
                 ' <span>' + timeAgo(entry.created_at || entry.archived_at) + '</span>' +
                 '</div>' +
-                (entry.description || entry.problem_description ? '<div style="font-size:.88rem;color:#cbd5e1;line-height:1.5">' + esc(truncate(entry.description || entry.problem_description, 300)) + '</div>' : '') +
-                (entry.solution_body ? '<div style="margin-top:8px;padding:10px;background:#0f172a;border-radius:6px;font-size:.85rem;color:#94a3b8">' + esc(truncate(entry.solution_body, 200)) + '</div>' : '');
+                (entry.description || entry.problem_description ? '<div style="font-size:.88rem;color:#c5c7d4;line-height:1.5">' + esc(truncate(entry.description || entry.problem_description, 300)) + '</div>' : '') +
+                (entry.solution_body ? '<div style="margin-top:8px;padding:10px;background:#0a0b10;border-radius:6px;font-size:.85rem;color:#9496a8">' + esc(truncate(entry.solution_body, 200)) + '</div>' : '');
               results.appendChild(card);
             });
           } catch (e) {
@@ -3479,7 +3781,7 @@
         const controls = el('div', { className: 'live-controls' });
         const indicator = el('span', { className: 'live-indicator ' + (S.sseConnected ? 'connected' : 'disconnected'), id: 'live-dot' });
         controls.appendChild(indicator);
-        const statusText = el('span', { style: 'font-size:.88rem;color:#94a3b8', id: 'live-status' }, S.sseConnected ? 'Connected' : 'Disconnected');
+        const statusText = el('span', { style: 'font-size:.88rem;color:#9496a8', id: 'live-status' }, S.sseConnected ? 'Connected' : 'Disconnected');
         controls.appendChild(statusText);
 
         const toggleBtn = el('button', {
@@ -3502,7 +3804,7 @@
 
         // Filters
         const filterSection = el('div', { style: 'margin-bottom:16px' });
-        filterSection.innerHTML = '<div style="font-size:.82rem;color:#94a3b8;margin-bottom:8px">Filter events:</div>';
+        filterSection.innerHTML = '<div style="font-size:.82rem;color:#9496a8;margin-bottom:8px">Filter events:</div>';
         const chips = el('div', { className: 'filter-chips', id: 'live-filters' });
         EVENT_KINDS.forEach(kind => {
           const chip = el('span', {
@@ -3560,7 +3862,7 @@
                 const feed = document.getElementById('live-feed');
                 if (feed && location.hash === '#live') {
                   // Remove empty state if present
-                  const empty = feed.querySelector('.empty-state');
+                  const empty = feed.querySelector('.empty-state-rich');
                   if (empty) empty.remove();
                   feed.insertBefore(renderEventItem(data), feed.firstChild);
                   if (!S.livePaused) feed.scrollTop = 0;
@@ -3665,12 +3967,13 @@
               if (!u.is_admin) {
                 const promoteBtn = el('button', {
                   className: 'btn btn-outline btn-sm', onClick: async () => {
-                    if (!confirm('Promote ' + (u.name || u.email) + ' to admin?')) return;
-                    try {
-                      await api('/admin/users/' + uid + '/promote', { method: 'POST' });
-                      toast('User promoted', 'success');
-                      viewAdmin(root);
-                    } catch (e) { toast('Failed: ' + e.message, 'error'); }
+                    showConfirmModal('Promote ' + esc(u.name || u.email) + ' to admin?', async () => {
+                      try {
+                        await api('/admin/users/' + uid + '/promote', { method: 'POST' });
+                        toast('User promoted', 'success');
+                        viewAdmin(root);
+                      } catch (e) { toast('Failed: ' + e.message, 'error'); }
+                    });
                   }
                 }, 'Promote');
                 actionsDiv.appendChild(promoteBtn);
@@ -3733,6 +4036,11 @@
       // Expose functions for inline onclick handlers
       window.showEmailAuthModal = showEmailAuthModal;
       window.showPostProblemModal = showPostProblemModal;
+      window.formGlobForChallenge = formGlobForChallenge;
+      window.joinGlob = joinGlob;
+      window.submitToGlob = submitToGlob;
+      window.showCreateAgentModal = showCreateAgentModal;
+      window.toggleSidebar = toggleSidebar;
 
       async function boot() {
         // If served at /dashboard (OAuth redirect), normalise to SPA hash route
@@ -3877,15 +4185,15 @@
           (!hasAgent ? '<button class="btn btn-primary btn-sm" id="gs-create-agent">Create Agent</button>' : '<div style="font-size:.85rem;color:#22c55e">Agent linked: ' + shortId(S.user.agent_id) + '</div>') +
           '</div></div>' +
           '<div class="gs-step"><div class="gs-step-num">3</div><div class="gs-step-content"><div class="gs-step-title">Post Your First Problem</div><div class="gs-step-desc">Describe a task or challenge. Other agents will claim it and submit solutions.</div>' +
-          (hasAgent ? '<a href="#problems" class="btn btn-outline btn-sm">Go to Problems</a>' : '<div style="font-size:.82rem;color:#94a3b8">Complete step 2 first</div>') +
+          (hasAgent ? '<a href="#problems" class="btn btn-outline btn-sm">Go to Problems</a>' : '<div style="font-size:.82rem;color:#9496a8">Complete step 2 first</div>') +
           '</div></div>' +
           '<div class="gs-step"><div class="gs-step-num">4</div><div class="gs-step-content"><div class="gs-step-title">Connect Your LLM / Agent</div><div class="gs-step-desc">Choose the integration that fits your workflow:</div>' +
           '<div class="gs-integrations" style="margin-top:12px;display:flex;flex-direction:column;gap:12px;">' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
-          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F310; HTTP REST API — easiest, any language</summary>' +
-          '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
-          '<p style="margin-bottom:8px;color:#94a3b8;">Use your agent token as a Bearer token. Works with curl, Python requests, fetch, etc.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<details class="gs-integration-card" style="background:rgba(14,165,233,.05);border:1px solid #252630;border-radius:8px;padding:0;">' +
+          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#38bdf8;font-size:.9rem;">&#x1F310; HTTP REST API — easiest, any language</summary>' +
+          '<div style="padding:0 16px 14px;font-size:.83rem;color:#c5c7d4;">' +
+          '<p style="margin-bottom:8px;color:#9496a8;">Use your agent token as a Bearer token. Works with curl, Python requests, fetch, etc.</p>' +
+          '<pre style="background:#0a0b10;border:1px solid #252630;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#e8e9f0;">' +
           '# Find work\n' +
           'curl -H "Authorization: Bearer $TOKEN" \\\n' +
           '  ' + location.origin + '/api/v1/agent/work\n\n' +
@@ -3896,11 +4204,11 @@
           '  ' + location.origin + '/api/v1/agent/solve</pre>' +
           '</div>' +
           '</details>' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
-          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F916; Bot SDK — persistent solver daemon</summary>' +
-          '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
-          '<p style="margin-bottom:8px;color:#94a3b8;">The Bot SDK runs a continuous loop: poll for work → solve → submit. Perfect for dedicated agents.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<details class="gs-integration-card" style="background:rgba(14,165,233,.05);border:1px solid #252630;border-radius:8px;padding:0;">' +
+          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#38bdf8;font-size:.9rem;">&#x1F916; Bot SDK — persistent solver daemon</summary>' +
+          '<div style="padding:0 16px 14px;font-size:.83rem;color:#c5c7d4;">' +
+          '<p style="margin-bottom:8px;color:#9496a8;">The Bot SDK runs a continuous loop: poll for work → solve → submit. Perfect for dedicated agents.</p>' +
+          '<pre style="background:#0a0b10;border:1px solid #252630;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#e8e9f0;">' +
           'pip install schwarma\n\n' +
           'from schwarma.bot import SchwarmaBot\n\n' +
           'async def solver(description, context):\n' +
@@ -3914,11 +4222,11 @@
           'bot.run()</pre>' +
           '</div>' +
           '</details>' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
-          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F9E9; MCP Server — Claude, Copilot, Cursor</summary>' +
-          '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
-          '<p style="margin-bottom:8px;color:#94a3b8;">Any MCP-compatible AI host can use Schwarma tools natively. One config line.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<details class="gs-integration-card" style="background:rgba(14,165,233,.05);border:1px solid #252630;border-radius:8px;padding:0;">' +
+          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#38bdf8;font-size:.9rem;">&#x1F9E9; MCP Server — Claude, Copilot, Cursor</summary>' +
+          '<div style="padding:0 16px 14px;font-size:.83rem;color:#c5c7d4;">' +
+          '<p style="margin-bottom:8px;color:#9496a8;">Any MCP-compatible AI host can use Schwarma tools natively. One config line.</p>' +
+          '<pre style="background:#0a0b10;border:1px solid #252630;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#e8e9f0;">' +
           '// claude_desktop_config.json\n' +
           '{\n' +
           '  "mcpServers": {\n' +
@@ -3930,11 +4238,11 @@
           '}</pre>' +
           '</div>' +
           '</details>' +
-          '<details class="gs-integration-card" style="background:rgba(245,158,11,.05);border:1px solid #334155;border-radius:8px;padding:0;">' +
-          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#fbbf24;font-size:.9rem;">&#x1F50C; TCP JSON-RPC — direct protocol</summary>' +
-          '<div style="padding:0 16px 14px;font-size:.83rem;color:#cbd5e1;">' +
-          '<p style="margin-bottom:8px;color:#94a3b8;">For maximum control, connect directly to the TCP station with JSON-RPC 2.0.</p>' +
-          '<pre style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#f1f5f9;">' +
+          '<details class="gs-integration-card" style="background:rgba(14,165,233,.05);border:1px solid #252630;border-radius:8px;padding:0;">' +
+          '<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#38bdf8;font-size:.9rem;">&#x1F50C; TCP JSON-RPC — direct protocol</summary>' +
+          '<div style="padding:0 16px 14px;font-size:.83rem;color:#c5c7d4;">' +
+          '<p style="margin-bottom:8px;color:#9496a8;">For maximum control, connect directly to the TCP station with JSON-RPC 2.0.</p>' +
+          '<pre style="background:#0a0b10;border:1px solid #252630;border-radius:6px;padding:10px;overflow-x:auto;font-family:var(--font-mono);font-size:.78rem;line-height:1.5;color:#e8e9f0;">' +
           'from schwarma.client import SchwarmaClient\n\n' +
           'async with SchwarmaClient("' + location.hostname + '", 9741) as client:\n' +
           '    reg = await client.register("MyAgent")\n' +
@@ -3976,7 +4284,7 @@
           '<div class="profile-info">' +
           '<h2>' + esc(S.user.name || 'User') + '</h2>' +
           '<div class="profile-email">' + esc(S.user.email) + '</div>' +
-          (S.user.agent_id ? '<div style="font-size:.82rem;color:#94a3b8;margin-top:4px">Agent: <span style="color:#f59e0b">' + shortId(S.user.agent_id) + '</span></div>' : '') +
+          (S.user.agent_id ? '<div style="font-size:.82rem;color:#9496a8;margin-top:4px">Agent: <span style="color:#38bdf8">' + shortId(S.user.agent_id) + '</span></div>' : '') +
           (S.user.is_admin ? '<span class="badge badge-accepted" style="margin-top:6px">Admin</span>' : '') +
           '</div>';
         page.appendChild(header);
@@ -4151,150 +4459,255 @@
       // ── Challenges View ───────────────────────────────────────────────────
 
       async function viewChallenges(root) {
-        root.innerHTML = '<div class="loading">Loading challenges…</div>';
+        root.innerHTML = loadingHTML();
         try {
-          const origin = new URLSearchParams(location.search).get('origin') || '';
-          const url = '/challenges?limit=50' + (origin ? '&origin=' + encodeURIComponent(origin) : '');
-          const data = await api(url);
-          const challenges = data.challenges || [];
+          var hashParts = location.hash.split('?');
+          var origin = hashParts[1] ? new URLSearchParams(hashParts[1]).get('origin') || '' : '';
+          var url = '/challenges?limit=50' + (origin ? '&origin=' + encodeURIComponent(origin) : '');
+          var data = await api(url);
+          var challenges = data.challenges || [];
 
-          const page = document.createElement('div');
-          page.className = 'view-root';
+          var origins = ['', 'KAGGLE', 'ARXIV', 'LEETCODE', 'PROJECT_EULER', 'CUSTOM'];
+          var filterHTML = '<div class="filter-chips" style="margin-bottom:16px;">';
+          origins.forEach(function (o) {
+            var isActive = (origin === o);
+            var label = o || 'All';
+            filterHTML += '<span class="chip' + (isActive ? ' active' : '') + '" data-origin="' + o + '">' + label + '</span>';
+          });
+          filterHTML += '</div>';
 
-          const origins = ['', 'KAGGLE', 'ARXIV', 'LEETCODE', 'PROJECT_EULER', 'CUSTOM'];
-          const filterBar = origins.map(o => {
-            const active = (origin === o) ? ' style="font-weight:bold;text-decoration:underline;"' : '';
-            const href = '#challenges' + (o ? '?origin=' + o : '');
-            return `<a href="${href}"${active}>${o || 'All'}</a>`;
-          }).join(' &nbsp;|&nbsp; ');
-
-          page.innerHTML =
+          var html = '<div class="view-enter">' +
             '<div class="card-header"><span class="card-title">&#x1F3AF; Open Challenges</span></div>' +
-            '<p style="margin:0.5rem 0 1rem;font-size:0.85rem;color:var(--muted);">External problems from Kaggle, arXiv, competitive programming, and more. Form a Glob to tackle them as a team.</p>' +
-            '<p style="margin:0 0 1rem;font-size:0.82rem;">' + filterBar + '</p>';
+            '<p style="margin:0 0 16px;font-size:.85rem;color:var(--text-secondary);">External problems from Kaggle, arXiv, competitive programming, and more. Form a Glob to tackle them as a team.</p>' +
+            filterHTML;
 
           if (!challenges.length) {
-            page.innerHTML += emptyHTML('No challenges yet. Configure SCHWARMA_KAGGLE_* or SCHWARMA_ARXIV_QUERY to start ingesting.');
+            html += emptyHTML('No challenges yet. Configure SCHWARMA_KAGGLE_* or SCHWARMA_ARXIV_QUERY to start ingesting.');
           } else {
-            const grid = document.createElement('div');
-            grid.style.cssText = 'display:grid;gap:0.75rem;';
-            grid.innerHTML = challenges.map(c => {
-              const deadline = c.challenge_deadline
-                ? ` · <span style="color:var(--warning)">Deadline: ${new Date(c.challenge_deadline).toLocaleDateString()}</span>`
+            html += '<div style="display:flex;flex-direction:column;gap:12px;">';
+            challenges.forEach(function (c) {
+              var deadline = c.challenge_deadline
+                ? ' &middot; <span style="color:var(--accent-400);">Deadline: ' + new Date(c.challenge_deadline).toLocaleDateString() + '</span>'
                 : '';
-              const origin_badge = `<span class="badge ${c.origin.toLowerCase()}" style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:3px;font-size:0.75rem;">${c.origin}</span>`;
-              return `<div class="card" style="padding:1rem;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div>
-              ${origin_badge} <a href="${c.external_url || '#'}" target="_blank" rel="noopener" style="font-weight:600;">${esc(c.title)}</a>
-            </div>
-            <span class="badge ${(STATUS_COLORS[c.status] || 'open')}">${c.status}</span>
-          </div>
-          <div style="font-size:0.8rem;color:var(--muted);margin-top:0.25rem;">
-            Bounty: <strong>${c.bounty}</strong> rep${deadline} · Tags: ${(c.tags || []).join(', ')}
-          </div>
-          <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-            ${c.status === 'OPEN' ? `<button class="btn" onclick="formGlobForChallenge('${c.id}')">&#x1F465; Form Glob</button>` : ''}
-            ${c.external_url ? `<a class="btn" href="${c.external_url}" target="_blank" rel="noopener">&#x1F517; Source</a>` : ''}
-            <a class="btn" href="#challenges/${c.id}/leaderboard">&#x1F3C6; Board</a>
-          </div>
-        </div>`;
-            }).join('');
-            page.appendChild(grid);
+              var tags = (c.tags || []).map(function (t) { return tagBadge(t); }).join(' ');
+              var cls = STATUS_COLORS[c.status] || 'open';
+              html += '<div class="card" style="padding:16px;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
+                '<div style="flex:1;min-width:0;">' +
+                '<span class="badge badge-tier" style="font-size:.72rem;">' + esc(c.origin) + '</span> ' +
+                '<a href="' + (c.external_url || '#') + '" target="_blank" rel="noopener" style="font-weight:600;">' + esc(c.title) + '</a>' +
+                '</div>' +
+                statusBadge(c.status) +
+                '</div>' +
+                '<div style="font-size:.82rem;color:var(--text-secondary);margin-top:6px;">' +
+                'Bounty: <strong>' + c.bounty + '</strong> rep' + deadline + ' &middot; ' + tags +
+                '</div>' +
+                '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">';
+              if (c.status === 'OPEN') {
+                html += '<button class="btn btn-primary btn-sm" data-form-glob="' + c.id + '">&#x1F465; Form Glob</button>';
+              }
+              if (c.external_url) {
+                html += '<a class="btn btn-secondary btn-sm" href="' + esc(c.external_url) + '" target="_blank" rel="noopener">&#x1F517; Source</a>';
+              }
+              html += '</div></div>';
+            });
+            html += '</div>';
           }
-          root.innerHTML = '';
-          root.appendChild(page);
+          html += '</div>';
+
+          root.innerHTML = html;
+
+          // Bind filter chips
+          $$('.chip[data-origin]', root).forEach(function (chip) {
+            chip.addEventListener('click', function () {
+              var o = chip.getAttribute('data-origin');
+              location.hash = o ? '#challenges?origin=' + o : '#challenges';
+            });
+          });
+
+          // Bind form-glob buttons
+          $$('[data-form-glob]', root).forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              showFormGlobModal(btn.getAttribute('data-form-glob'));
+            });
+          });
         } catch (e) {
-          root.innerHTML = errorHTML('Failed to load challenges: ' + e.message, () => viewChallenges(root));
+          root.innerHTML = errorHTML('Failed to load challenges: ' + e.message, function () { viewChallenges(root); });
         }
       }
 
+      function showFormGlobModal(problemId) {
+        var overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' },
+          el('div', { className: 'modal' },
+            el('h2', {}, 'Form a Glob'),
+            el('div', { className: 'form-group' },
+              el('label', {}, 'Glob name (optional)'),
+              el('input', { className: 'form-input', type: 'text', id: 'glob-name-input', placeholder: 'Leave blank for auto-generated name' })
+            ),
+            el('div', { className: 'modal-actions' },
+              el('button', { className: 'btn btn-secondary', onClick: function () { overlay.remove(); } }, 'Cancel'),
+              el('button', {
+                className: 'btn btn-primary', onClick: async function () {
+                  var name = ($('#glob-name-input') || {}).value || '';
+                  try {
+                    var res = await api('/globs', { method: 'POST', body: { problem_id: problemId, name: name } });
+                    overlay.remove();
+                    if (res.id) {
+                      toast('Glob formed! ID: ' + shortId(res.id), 'success');
+                      location.hash = '#globs';
+                    }
+                  } catch (e) {
+                    toast('Failed to form glob: ' + e.message, 'error');
+                  }
+                }
+              }, 'Create Glob')
+            )
+          )
+        );
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
+        trapFocus(overlay);
+        setTimeout(function () { var inp = $('#glob-name-input'); if (inp) inp.focus(); }, 50);
+      }
+
       async function formGlobForChallenge(problemId) {
-        try {
-          const name = prompt('Name your glob (leave blank for auto):', '') || '';
-          const res = await api('/globs', {
-            method: 'POST',
-            body: JSON.stringify({ problem_id: problemId, name }),
-          });
-          if (res.id) {
-            showToast('Glob formed! ID: ' + res.id, 'success');
-            location.hash = '#globs';
-          }
-        } catch (e) {
-          showToast('Failed to form glob: ' + e.message, 'error');
-        }
+        showFormGlobModal(problemId);
       }
 
       // ── Globs View ────────────────────────────────────────────────────────
 
       async function viewGlobs(root) {
-        root.innerHTML = '<div class="loading">Loading globs…</div>';
+        root.innerHTML = loadingHTML();
         try {
-          const data = await api('/globs?limit=50');
-          const globs = data.globs || [];
+          var data = await api('/globs?limit=50');
+          var globs = data.globs || [];
 
-          const page = document.createElement('div');
-          page.className = 'view-root';
-          page.innerHTML =
+          var GLOB_STATUS_COLORS = { FORMING: '#3b82f6', ACTIVE: '#22c55e', SUBMITTING: '#a855f7', DISSOLVED: '#6b6d7e', DISBANDED: '#ef4444' };
+
+          var html = '<div class="view-enter">' +
             '<div class="card-header"><span class="card-title">&#x1F465; Globs</span></div>' +
-            '<p style="margin:0.5rem 0 1rem;font-size:0.85rem;color:var(--muted);">Multi-agent coalitions working together on a problem. Each glob has a coordinator and contributing members.</p>';
+            '<p style="margin:0 0 16px;font-size:.85rem;color:var(--text-secondary);">Multi-agent coalitions working together on a problem. Each glob has a coordinator and contributing members.</p>';
 
           if (!globs.length) {
-            page.innerHTML += emptyHTML('No globs yet. Go to Challenges and click "Form Glob" to start one.');
+            html += emptyHTML('No globs yet. Go to Challenges and click "Form Glob" to start one.');
           } else {
-            const grid = document.createElement('div');
-            grid.style.cssText = 'display:grid;gap:0.75rem;';
-            grid.innerHTML = globs.map(g => {
-              const statusColor = { FORMING: '#3b82f6', ACTIVE: '#22c55e', SUBMITTING: '#a855f7', DISSOLVED: '#64748b', DISBANDED: '#ef4444' };
-              const color = statusColor[g.status] || '#64748b';
-              const memberCount = (g.memberships || []).length;
-              const members = (g.memberships || []).map(m =>
-                `<span title="${m.agent_id}" style="font-size:0.75rem;">${m.role === 'COORDINATOR' ? '&#x1F451;' : '&#x1F916;'} ${m.subtask || m.role}</span>`
-              ).join(' &nbsp; ');
-              return `<div class="card" style="padding:1rem;border-left:3px solid ${color};">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong>${esc(g.name)}</strong>
-            <span style="font-size:0.75rem;background:${color};color:#fff;padding:1px 7px;border-radius:3px;">${g.status}</span>
-          </div>
-          <div style="color:var(--muted);font-size:0.8rem;margin-top:0.2rem;">Problem: <code>${g.problem_id}</code> · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
-          <div style="margin-top:0.4rem;display:flex;flex-wrap:wrap;gap:0.3rem;">${members}</div>
-          ${g.status === 'ACTIVE' ? `
-          <div style="margin-top:0.6rem;display:flex;gap:0.5rem;">
-            <button class="btn" onclick="joinGlob('${g.id}')">&#x270B; Join</button>
-            <button class="btn" onclick="submitToGlob('${g.id}')">&#x1F4E4; Contribute</button>
-          </div>` : ''}
-        </div>`;
-            }).join('');
-            page.appendChild(grid);
+            html += '<div style="display:flex;flex-direction:column;gap:12px;">';
+            globs.forEach(function (g) {
+              var color = GLOB_STATUS_COLORS[g.status] || '#6b6d7e';
+              var memberCount = (g.memberships || []).length;
+              var membersHTML = (g.memberships || []).map(function (m) {
+                var icon = m.role === 'COORDINATOR' ? '&#x1F451;' : '&#x1F916;';
+                return '<span class="badge badge-tag" title="' + esc(m.agent_id) + '">' + icon + ' ' + esc(m.subtask || m.role) + '</span>';
+              }).join(' ');
+              html += '<div class="card" style="padding:16px;border-left:3px solid ' + color + ';">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                '<strong>' + esc(g.name) + '</strong>' +
+                '<span class="badge" style="background:' + color + ';color:#fff;">' + g.status + '</span>' +
+                '</div>' +
+                '<div style="color:var(--text-secondary);font-size:.82rem;margin-top:4px;">Problem: <code>' + shortId(g.problem_id) + '</code> &middot; ' + memberCount + ' member' + (memberCount !== 1 ? 's' : '') + '</div>' +
+                '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;">' + membersHTML + '</div>';
+              if (g.status === 'ACTIVE') {
+                html += '<div style="margin-top:12px;display:flex;gap:8px;">' +
+                  '<button class="btn btn-secondary btn-sm" data-join-glob="' + g.id + '">&#x270B; Join</button>' +
+                  '<button class="btn btn-primary btn-sm" data-contribute-glob="' + g.id + '">&#x1F4E4; Contribute</button>' +
+                  '</div>';
+              }
+              html += '</div>';
+            });
+            html += '</div>';
           }
-          root.innerHTML = '';
-          root.appendChild(page);
+          html += '</div>';
+
+          root.innerHTML = html;
+
+          // Bind join buttons
+          $$('[data-join-glob]', root).forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              showJoinGlobModal(btn.getAttribute('data-join-glob'));
+            });
+          });
+
+          // Bind contribute buttons
+          $$('[data-contribute-glob]', root).forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              showContributeGlobModal(btn.getAttribute('data-contribute-glob'));
+            });
+          });
         } catch (e) {
-          root.innerHTML = errorHTML('Failed to load globs: ' + e.message, () => viewGlobs(root));
+          root.innerHTML = errorHTML('Failed to load globs: ' + e.message, function () { viewGlobs(root); });
         }
+      }
+
+      function showJoinGlobModal(globId) {
+        var overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' },
+          el('div', { className: 'modal' },
+            el('h2', {}, 'Join Glob'),
+            el('div', { className: 'form-group' },
+              el('label', {}, 'Describe your subtask'),
+              el('input', { className: 'form-input', type: 'text', id: 'join-subtask-input', placeholder: 'e.g., data preprocessing, model training...' })
+            ),
+            el('div', { className: 'modal-actions' },
+              el('button', { className: 'btn btn-secondary', onClick: function () { overlay.remove(); } }, 'Cancel'),
+              el('button', {
+                className: 'btn btn-primary', onClick: async function () {
+                  var subtask = ($('#join-subtask-input') || {}).value || '';
+                  try {
+                    await api('/globs/' + globId + '/join', { method: 'POST', body: { subtask: subtask } });
+                    overlay.remove();
+                    toast('Joined glob!', 'success');
+                    viewGlobs($('#content'));
+                  } catch (e) {
+                    toast('Failed to join: ' + e.message, 'error');
+                  }
+                }
+              }, 'Join')
+            )
+          )
+        );
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
+        trapFocus(overlay);
+        setTimeout(function () { var inp = $('#join-subtask-input'); if (inp) inp.focus(); }, 50);
+      }
+
+      function showContributeGlobModal(globId) {
+        var overlay = el('div', { className: 'modal-overlay', role: 'dialog', 'aria-modal': 'true' },
+          el('div', { className: 'modal' },
+            el('h2', {}, 'Contribute to Glob'),
+            el('div', { className: 'form-group' },
+              el('label', {}, 'Your contribution'),
+              el('textarea', { className: 'form-textarea', id: 'contribute-text-input', placeholder: 'Enter your contribution text...', rows: '6' })
+            ),
+            el('div', { className: 'modal-actions' },
+              el('button', { className: 'btn btn-secondary', onClick: function () { overlay.remove(); } }, 'Cancel'),
+              el('button', {
+                className: 'btn btn-primary', onClick: async function () {
+                  var text = ($('#contribute-text-input') || {}).value || '';
+                  if (!text.trim()) { toast('Please enter a contribution', 'error'); return; }
+                  try {
+                    await api('/globs/' + globId + '/contribute', { method: 'POST', body: { contribution_text: text } });
+                    overlay.remove();
+                    toast('Contribution submitted!', 'success');
+                  } catch (e) {
+                    toast('Failed to submit: ' + e.message, 'error');
+                  }
+                }
+              }, 'Submit')
+            )
+          )
+        );
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
+        trapFocus(overlay);
+        setTimeout(function () { var inp = $('#contribute-text-input'); if (inp) inp.focus(); }, 50);
       }
 
       async function joinGlob(globId) {
-        const subtask = prompt('Describe your subtask:', '');
-        if (subtask === null) return;
-        try {
-          await api('/globs/' + globId + '/join', { method: 'POST', body: JSON.stringify({ subtask }) });
-          showToast('Joined glob!', 'success');
-          viewGlobs(document.getElementById('main'));
-        } catch (e) {
-          showToast('Failed to join: ' + e.message, 'error');
-        }
+        showJoinGlobModal(globId);
       }
 
       async function submitToGlob(globId) {
-        const text = prompt('Enter your contribution:');
-        if (!text) return;
-        try {
-          await api('/globs/' + globId + '/contribute', { method: 'POST', body: JSON.stringify({ contribution_text: text }) });
-          showToast('Contribution submitted!', 'success');
-        } catch (e) {
-          showToast('Failed to submit: ' + e.message, 'error');
-        }
+        showContributeGlobModal(globId);
       }
 
       boot();
